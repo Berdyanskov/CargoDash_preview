@@ -7,7 +7,9 @@ name = "cargodash"
 version = "0.1.0"
 description = "Modular pipeline for LLM training data synthesis and augmentation"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "pyarrow>=15.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["cargodash"]
