@@ -1,13 +1,15 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
+  type EdgeTypes,
   type ReactFlowInstance,
 } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import { nodeTypes } from "../nodes";
 import type { NodeKind } from "../types/graph";
+import { DeletableEdge } from "./DeletableEdge";
 
 export function Canvas() {
   const nodes = useGraphStore((s) => s.nodes);
@@ -42,12 +44,18 @@ export function Canvas() {
     [addNode],
   );
 
+  const edgeTypes: EdgeTypes = useMemo(
+    () => ({ smoothstep: DeletableEdge, default: DeletableEdge }),
+    [],
+  );
+
   return (
     <div ref={wrapperRef} className="h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -55,6 +63,7 @@ export function Canvas() {
         onSelectionChange={({ nodes }) =>
           selectNode(nodes[0]?.id ?? null)
         }
+        deleteKeyCode={["Delete", "Backspace"]}
         fitView
       >
         <Background gap={16} />

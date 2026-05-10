@@ -89,7 +89,9 @@ source >> clean >> judge_quality
 judge_quality.on_true  >> judge_lang
 judge_lang.on_true     >> augment >> target
 judge_lang.on_false    >> target                  # 与上行汇合到同一 target
-judge_quality.on_false >> Processor(log_drop, ...)
+judge_quality.on_false >> Processor(log_drop, ...)   # log_drop 由你自己写，
+                                                     # 例如 def log_drop(row): print(row); return None
+                                                     # 返回 None 即丢弃该样本
 
 Pipeline(source).run()
 ```
