@@ -4,9 +4,13 @@
 
 # CargoDash
 
-> ⚠️ **当前为 Preview 版本（v0.2.0）**：API 与内部实现仍可能在没有兼容性保证的情况下变动，欢迎试用、提 issue，但暂不建议用于生产环境。
+> ⚠️ **当前为 Preview 版本（v0.2.1）**：API 与内部实现仍可能在没有兼容性保证的情况下变动，欢迎试用、提 issue，但暂不建议用于生产环境。
 
 CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大模型训练数据合成 / 增强流水线的 Python 库。核心理念：任何数据处理流水线都可以由**顺序**与**分支**两类原语嵌套组合而成。
+
+## v0.2.1 新增
+
+- **WebUI 可视化构图（preview）**：浏览器内拖拽节点、连线、配置参数，一键导出 `pipeline.py`，不会写代码也能搭流水线。详见下方 [WebUI（可视化构图）](#webui可视化构图) 小节。
 
 ## v0.2 新增
 
@@ -98,6 +102,30 @@ Pipeline(source).run()
 
 完整可运行示例见 [`examples/basic_pipeline.py`](examples/basic_pipeline.py)。
 
+## WebUI（可视化构图）
+
+如果不想写代码，CargoDash 在 v0.2.1 起提供一套基于浏览器的可视化构图工具：拖拽节点、连线、在右侧面板里填参数 / 写函数，一键导出 `pipeline.py` 即可用 `python pipeline.py` 跑起来。
+
+<p align="center">
+  <img src="assets/images/webui1.png" alt="CargoDash WebUI" width="900">
+</p>
+
+**支持的节点**：`RawDataSource` / `DataOutput` / `Processor` / `Judge` / `Vote` / `LLMCall`，与 Python API 一一对应。`Judge` 自带 `on_true` / `on_false` 两个输出端口；`Vote` 不连边，由 `Judge` 在属性面板里引用并在导出时自动内联到 `Judge(Vote(...), ...)`。
+
+**用户自定义函数**：`Processor.fn` / `Judge.predicate(code)` / `Vote.model_list[*]` 直接在节点属性面板的 Monaco 编辑器里写 Python，导出时作为顶级 `def` 块前置到生成的 `.py` 中；`LLMCall` 则全部用结构化表单填写。
+
+**工程文件**：`.cdgraph.json` 是图状态的真值，支持导出 / 导入用于二次编辑；`pipeline.py` 是单向导出产物，建议从 `.cdgraph.json` 重新生成而不是手改。
+
+启动方式（需 Node.js ≥ 18）：
+
+```bash
+cd webui
+npm install
+npm run dev          # 浏览器打开 http://localhost:5173
+```
+
+更多说明见 [`webui/README.md`](webui/README.md)。
+
 ## 使用流程概览
 
 1. **声明 Schema**：`Schema.of(...)`，可传 python 类型或 `pyarrow.DataType`
@@ -115,18 +143,23 @@ Pipeline(source).run()
 ## 目录结构
 
 ```
-cargodash/
-├── core/        # Module 基类、Port、>> 操作符、Pipeline 构图
-├── data_utils/  # Batch、Schema（pyarrow 后端）、节点间队列
-├── modules/     # RawDataSource / DataOutput / Processor / Judge
-├── voting/      # Vote
-├── models/      # ChatClient 抽象 + OpenAI 兼容 client + LLMCall
-└── runtime/     # 执行引擎（threading + bounded queue + 节点失败容错）
+CargoDash/
+├── cargodash/      # Python 库
+│   ├── core/        # Module 基类、Port、>> 操作符、Pipeline 构图
+│   ├── data_utils/  # Batch、Schema（pyarrow 后端）、节点间队列
+│   ├── modules/     # RawDataSource / DataOutput / Processor / Judge
+│   ├── voting/      # Vote
+│   ├── models/      # ChatClient 抽象 + OpenAI 兼容 client + LLMCall
+│   └── runtime/     # 执行引擎（threading + bounded queue + 节点失败容错）
+└── webui/          # 浏览器内可视化构图（React + React Flow + Monaco，单向 codegen → pipeline.py）
 ```
 
 ## Roadmap
 
-v0.2 已完成：核心 DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI 兼容 client / 节点失败容错。后续按优先级：
+v0.2 已完成：核心 DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI 兼容 client / 节点失败容错。  
+v0.2.1 已完成：WebUI 可视化构图 + 单向 codegen 导出 `pipeline.py`。
+
+后续按优先级：
 
 - 内置开箱即用的节点库（text 清洗 / 去重 / 质量分 / SFT 对话合成）
 - 原生 vLLM、SGLang 协议（绕开 OpenAI SDK 走更高效的本地路径）
@@ -136,6 +169,7 @@ v0.2 已完成：核心 DAG / Schema / streaming + backpressure / `LLMCall` + Op
 - `DataOutput` 的 `preserve_order=True`
 - `Loop` 作为分支回跳的语法糖
 - CLI、可观测性（结构化日志 / 指标 / 追踪）
+- WebUI 后续阶段：节点级实时校验、`pipeline.py` 反向解析回图、点运行 + 实时日志回流
 
 
 
