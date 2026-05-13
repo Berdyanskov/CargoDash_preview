@@ -6,9 +6,13 @@
 
 > 🇨🇳 **中文用户请看 [README_ch.md](README_ch.md)** — 本文件是其英文镜像。
 
-> ⚠️ **Preview release (v0.2.2)**: APIs and internals may still change without compatibility guarantees. Feedback and issues are welcome; not yet recommended for production use.
+> ⚠️ **Preview release (v0.2.3)**: APIs and internals may still change without compatibility guarantees. Feedback and issues are welcome; not yet recommended for production use.
 
 CargoDash is a Python library for building **simple, modular, versatile, and efficient** LLM training-data synthesis & augmentation pipelines. Core idea: any data-processing pipeline can be expressed by nesting two primitives — **sequence** and **branch**.
+
+## New in v0.2.3
+
+- **WebUI: remote-server access fixes**. The dev server config now plays nicely with editor port-forwarding setups: `base: './'` makes all asset URLs relative (works under both root-subdomain tunnels like `xxx-5173.devtunnels.ms/` and subpath proxies like `<host>/<...>/proxy/5173/`); `server.allowedHosts: true` stops the Vite 5.x default Host-header check from blocking institutional hostnames; a new `preview` config block mirrors `server` so `npm run build && npm run preview` is reachable through the same proxy URL — recommended over `npm run dev` for subpath-proxy environments where Vite-dev-internal absolute paths (`/@vite/client` etc.) wouldn't survive the proxy. See [`webui/README.md`](webui/README.md#remote-server-access).
 
 ## New in v0.2.2
 
@@ -207,7 +211,8 @@ CargoDash/
 
 Done in v0.2: core DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI-compat client / node-failure tolerance.  
 Done in v0.2.1: WebUI visual editor + one-way `pipeline.py` codegen.  
-Done in v0.2.2: local-model deployment (`LocalHFChatClient` + `LocalVLLMChatClient`); `ChatClient.open()` / `close()` lifecycle; WebUI `ModelSpec` floating node.
+Done in v0.2.2: local-model deployment (`LocalHFChatClient` + `LocalVLLMChatClient`); `ChatClient.open()` / `close()` lifecycle; WebUI `ModelSpec` floating node.  
+Done in v0.2.3: WebUI dev/preview config for editor-port-forwarded remote-server access (relative-base, host allow-list, preview block).
 
 Up next, in priority order:
 

@@ -4,9 +4,13 @@
 
 # CargoDash
 
-> ⚠️ **当前为 Preview 版本（v0.2.2）**：API 与内部实现仍可能在没有兼容性保证的情况下变动，欢迎试用、提 issue，但暂不建议用于生产环境。
+> ⚠️ **当前为 Preview 版本（v0.2.3）**：API 与内部实现仍可能在没有兼容性保证的情况下变动，欢迎试用、提 issue，但暂不建议用于生产环境。
 
 CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大模型训练数据合成 / 增强流水线的 Python 库。核心理念：任何数据处理流水线都可以由**顺序**与**分支**两类原语嵌套组合而成。
+
+## v0.2.3 新增
+
+- **WebUI 远程服务器访问适配**。dev server 配置现已对编辑器端口转发场景做了适配：`base: './'` 让所有资源 URL 走相对路径（同时兼容 `xxx-5173.devtunnels.ms/` 这种根子域名隧道和 `<host>/<...>/proxy/5173/` 这种子路径代理）；`server.allowedHosts: true` 关掉 Vite 5.x 默认的 Host header 校验，避免被机构域名拦截；新增 `preview` 配置块与 `server` 对齐，子路径代理环境下推荐 `npm run build && npm run preview`（取代 `npm run dev`），因为 dev 模式会注入 `/@vite/client` 等 `base` 配置管不到的绝对路径资源，过不了子路径代理。详见 [`webui/README.md`](webui/README.md#remote-server-access)。
 
 ## v0.2.2 新增
 
@@ -202,7 +206,8 @@ CargoDash/
 
 v0.2 已完成：核心 DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI 兼容 client / 节点失败容错。  
 v0.2.1 已完成：WebUI 可视化构图 + 单向 codegen 导出 `pipeline.py`。  
-v0.2.2 已完成：本地模型部署（`LocalHFChatClient` + `LocalVLLMChatClient`）、`ChatClient.open()` / `close()` 生命周期、WebUI `ModelSpec` 悬浮节点。
+v0.2.2 已完成：本地模型部署（`LocalHFChatClient` + `LocalVLLMChatClient`）、`ChatClient.open()` / `close()` 生命周期、WebUI `ModelSpec` 悬浮节点。  
+v0.2.3 已完成：WebUI dev/preview 配置适配编辑器端口转发的远程访问场景（相对 `base`、host 白名单、`preview` 配置块）。
 
 后续按优先级：
 
