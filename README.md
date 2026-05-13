@@ -171,7 +171,7 @@ npm install
 npm run dev          # open http://localhost:5173
 ```
 
-Running this on a remote server? `vite.config.ts` is set up with `base: './'`, so the dev server works through your editor's port-forwarding URL whether it lands at a root subdomain (`xxx-5173.<region>.devtunnels.ms/`, VS Code Tunnels / Cursor) or under a subpath proxy (`<host>/<...>/proxy/5173/`, code-server etc.). Full notes (including the SSH-tunnel fallback) in [`webui/README.md`](webui/README.md#remote-server-access).
+Running this on a remote server? If your editor forwards the port via a root subdomain (`xxx-5173.<region>.devtunnels.ms/`, VS Code Tunnels / Cursor), `npm run dev` works directly. If it forwards via a subpath proxy (`<host>/<...>/proxy/5173/`, code-server etc.), use `npm run build && npm run preview` instead — Vite's dev mode injects absolute-path internal scripts that don't survive a subpath proxy. Full notes in [`webui/README.md`](webui/README.md#remote-server-access).
 
 More details: [`webui/README.md`](webui/README.md).
 

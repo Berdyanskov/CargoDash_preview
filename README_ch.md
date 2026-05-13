@@ -166,7 +166,7 @@ npm install
 npm run dev          # 浏览器打开 http://localhost:5173
 ```
 
-**在远程服务器上跑？** `vite.config.ts` 已配 `base: './'`，所以无论你通过编辑器的端口转发拿到的是 `xxx-5173.<region>.devtunnels.ms/` 这种根子域名（VS Code Tunnels / Cursor），还是 `<host>/<...>/proxy/5173/` 这种子路径代理（code-server 等），dev server 都能正常打开。完整说明（含 SSH 隧道作为兜底）见 [`webui/README.md`](webui/README.md#remote-server-access)。
+**在远程服务器上跑？** 编辑器端口转发给的 URL 如果是 `xxx-5173.<region>.devtunnels.ms/` 这种根子域名（VS Code Tunnels / Cursor），`npm run dev` 直接能跑；如果是 `<host>/<...>/proxy/5173/` 这种子路径代理（code-server 等），改用 `npm run build && npm run preview` —— Vite dev 模式会注入一批 `base` 配置管不到的绝对路径脚本，过不了子路径代理；build 产物就没这个问题。完整说明见 [`webui/README.md`](webui/README.md#remote-server-access)。
 
 更多说明见 [`webui/README.md`](webui/README.md)。
 

@@ -23,26 +23,46 @@ npm run dev          # http://localhost:5173
 ## Remote server access
 
 When `npm run dev` runs on a remote machine you reach via your editor's
-port-forwarding feature, you'll hit the dev server through one of two
-URL shapes depending on the editor / tunnel:
+port-forwarding feature, you'll hit the server through one of two URL
+shapes depending on the editor / tunnel:
 
 1. **Root subdomain**, e.g. `https://xxx-5173.<region>.devtunnels.ms/` —
    VS Code Tunnels / Cursor. The forwarded port is on its own subdomain;
-   the app lives at the root path. Just works.
+   the app lives at the root path.
 2. **Subpath proxy**, e.g. `https://<host>/<...>/proxy/5173/` —
    `code-server` and similar in-browser VS Code variants, JupyterHub
-   gateways, etc. The dev server is mounted under a path prefix.
+   gateways, etc. The app is mounted under a path prefix.
 
-The subpath case is the one that bites you: an absolute asset URL like
-`/src/main.tsx` in the served HTML resolves to `https://<host>/src/main.tsx`,
-bypassing the `/<...>/proxy/5173/` prefix and 404'ing. We work around
-this with `base: './'` in `vite.config.ts`, which makes all generated
-asset URLs relative to the current page. Relative URLs resolve correctly
-in both the subpath and root-subdomain cases, so the config is
-universally safe — no toggle needed.
+For case 1, plain `npm run dev` works. **For case 2, use `npm run build
+&& npm run preview` instead** — `dev` is fundamentally fragile under a
+subpath proxy because Vite injects internal absolute-path scripts
+(`/@vite/client`, `/@react-refresh`, sometimes the entry script too)
+that bypass the `base` config and 404 through the proxy. The **built**
+output uses only `base: './'`-respecting relative URLs, no internals,
+and `vite preview` is a plain static server that works happily under
+any path prefix.
 
-If `npm run dev` is bound to all interfaces and the cluster permits SSH,
-classic SSH local port forwarding also works as a fallback:
+```bash
+# on the remote machine
+cd webui
+npm run build     # writes dist/
+npm run preview   # serves dist/ on 0.0.0.0:5173
+```
+
+The `preview` block in `vite.config.ts` mirrors `server` (port 5173,
+host: true, allowedHosts: true), so the same proxy URL you tried for
+`dev` works for `preview` without changes.
+
+Tradeoff: no HMR — you must rerun `npm run build` after editing the
+WebUI source. For the typical "use the WebUI as a graph editor" remote
+case that's fine.
+
+If you need HMR remotely, you'd have to either use case 1 (root
+subdomain tunnel) and `npm run dev`, or set `server.hmr` to match your
+specific proxy URL.
+
+If the cluster permits SSH, classic SSH local port forwarding is also a
+fallback:
 
 ```bash
 # on your laptop
@@ -50,14 +70,6 @@ ssh -L 5173:127.0.0.1:5173 <user>@<remote-host>
 ```
 
 then open `http://localhost:5173` in your laptop browser.
-
-### HMR (optional)
-
-Hot-module-reload uses a separate WebSocket channel that `base` does not
-influence. Through a subpath proxy it may or may not survive — depends
-on whether the proxy forwards WebSocket upgrades. If saves stop
-auto-refreshing the page, manually reload; if you want HMR fixed,
-configure `server.hmr` to match your proxy URL.
 
 ## Build
 
