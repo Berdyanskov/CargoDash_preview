@@ -171,6 +171,8 @@ npm install
 npm run dev          # open http://localhost:5173
 ```
 
+Running this on a remote server? The dev server binds to all interfaces, but the cluster firewall almost certainly blocks port 5173. Use SSH local port forwarding from your laptop: `ssh -L 5173:127.0.0.1:5173 <user>@<remote-host>`, then open `http://localhost:5173` locally — full notes in [`webui/README.md`](webui/README.md#remote-server-access-ssh-port-forwarding).
+
 More details: [`webui/README.md`](webui/README.md).
 
 ## Workflow overview

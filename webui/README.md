@@ -20,6 +20,31 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
+## Remote server access (SSH port forwarding)
+
+If you run `npm run dev` on a remote machine (e.g. a GPU node you SSH'd
+into), `http://localhost:5173` on your laptop won't reach it — clusters
+typically block inbound ports even though Vite already binds to all
+interfaces (`server.host: true` in `vite.config.ts`). Use SSH local port
+forwarding to bridge the two:
+
+On **your laptop**:
+
+```bash
+ssh -L 5173:127.0.0.1:5173 <user>@<remote-host>
+```
+
+Keep that session open, run `npm run dev` inside it, then open
+`http://localhost:5173` in your laptop browser — the tunnel forwards
+each request to the remote dev server.
+
+- VS Code Remote / Cursor / JetBrains Gateway forward dev-server ports
+  automatically; check the "Ports" panel, no manual `-L` needed.
+- If you go through a jump host, add `-J <user>@<jump-host>` or set
+  `ProxyJump` in `~/.ssh/config`.
+- If `5173` is taken locally, change the local side:
+  `ssh -L 5174:127.0.0.1:5173 ...` and open `http://localhost:5174`.
+
 ## Build
 
 ```bash
