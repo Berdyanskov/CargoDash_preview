@@ -58,7 +58,7 @@ git clone https://github.com/Berdyanskov/CargoDash.git
 # Or Gitee (recommended in mainland China)
 git clone https://gitee.com/the-call-of-volgograd/cargo-dash_preview.git
 
-cd CargoDash      # or cargo-dash_preview
+cd CargoDash      
 pip install -e .
 ```
 
