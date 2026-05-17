@@ -51,7 +51,7 @@ CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大
 
 ```bash
 # Gitee（国内推荐）
-git clone https://gitee.com/the-call-of-volgograd/cargo-dash_preview.git
+git clone https://gitee.com/the-call-of-volgograd/cargo-dash.git
 
 # 或 GitHub
 git clone https://github.com/Berdyanskov/CargoDash.git
