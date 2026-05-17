@@ -53,12 +53,12 @@ Requires Python ≥ 3.10.
 
 ```bash
 # GitHub
-git clone https://github.com/Berdyanskov/CargoDash_preview.git
+git clone https://github.com/Berdyanskov/CargoDash.git
 
 # Or Gitee (recommended in mainland China)
 git clone https://gitee.com/the-call-of-volgograd/cargo-dash_preview.git
 
-cd CargoDash_preview      # or cargo-dash_preview
+cd CargoDash      # or cargo-dash_preview
 pip install -e .
 ```
 
