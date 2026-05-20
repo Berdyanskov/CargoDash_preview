@@ -70,6 +70,23 @@ class TestPipelineSchemaValidation(unittest.TestCase):
         u2 >> sink
         Pipeline(src)  # must not raise
 
+    def test_multi_source_collects_all_reachable_nodes(self):
+        src_a, src_b = Module(name="src_a"), Module(name="src_b")
+        sink = Module(name="sink")
+        src_a >> sink
+        src_b >> sink
+        pipeline = Pipeline([src_a, src_b])
+        self.assertEqual(set(pipeline.nodes), {src_a, src_b, sink})
+        self.assertEqual(pipeline.sources, [src_a, src_b])
+
+    def test_empty_source_list_raises(self):
+        with self.assertRaises(ValueError):
+            Pipeline([])
+
+    def test_non_module_source_raises(self):
+        with self.assertRaises(TypeError):
+            Pipeline(["not a module"])  # type: ignore[list-item]
+
     def test_convergence_with_mismatched_schemas_raises(self):
         src = Module(name="src")
         u1 = Processor(_passthrough, output_schema=Schema.of(text=str), name="u1")

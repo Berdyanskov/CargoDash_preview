@@ -105,6 +105,26 @@ class TestExecutorEndToEnd(unittest.TestCase):
             ["UPPER: A", "UPPER: B", "UPPER: C"],
         )
 
+    def test_multi_source_pipeline_merges_into_single_sink(self):
+        src_a_path = self.dir / "a.jsonl"
+        src_b_path = self.dir / "b.jsonl"
+        out_path = self.dir / "out.jsonl"
+        _write_jsonl(src_a_path, [{"v": v, "src": "a"} for v in (1, 2)])
+        _write_jsonl(src_b_path, [{"v": v, "src": "b"} for v in (10, 20, 30)])
+
+        src_a = RawDataSource(str(src_a_path), batch_size=2)
+        src_b = RawDataSource(str(src_b_path), batch_size=2)
+        sink = DataOutput(str(out_path))
+        src_a >> sink
+        src_b >> sink
+        Pipeline([src_a, src_b]).run()
+
+        rows = _read_jsonl(out_path)
+        self.assertEqual(
+            sorted((r["src"], r["v"]) for r in rows),
+            [("a", 1), ("a", 2), ("b", 10), ("b", 20), ("b", 30)],
+        )
+
     def test_error_in_processor_propagates_out_of_run(self):
         src_path, out_path = self.dir / "in.jsonl", self.dir / "out.jsonl"
         _write_jsonl(src_path, [{"v": i} for i in range(5)])

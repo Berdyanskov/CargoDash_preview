@@ -10,32 +10,7 @@
 
 CargoDash is a Python library for building **simple, modular, versatile, and efficient** LLM training-data synthesis & augmentation pipelines. Core idea: any data-processing pipeline can be expressed by nesting two primitives — **sequence** and **branch**.
 
-## New in v1.0.0
-
-- **First stable release.** The public API is now covered by a [Semantic Versioning](https://semver.org/) compatibility guarantee — see the note at the top.
-- **Test suite**: a `unittest`-based suite under [`tests/`](tests/) covering `Schema`, graph construction, pipeline schema validation, `Processor` / `Judge` / `Vote`, `LLMCall`, and end-to-end executor runs. Run it with `python -m unittest discover -s tests` (no extra dependencies needed).
-- **Continuous integration**: GitHub Actions runs the suite on Python 3.10 / 3.11 / 3.12 for every push and pull request.
-- **Single-sourced version**: the package version is defined once in `cargodash/__init__.py` and read dynamically by the build backend.
-
-## New in v0.2.3
-
-- **WebUI: remote-server access fixes**. The dev server config now plays nicely with editor port-forwarding setups: `base: './'` makes all asset URLs relative (works under both root-subdomain tunnels like `xxx-5173.devtunnels.ms/` and subpath proxies like `<host>/<...>/proxy/5173/`); `server.allowedHosts: true` stops the Vite 5.x default Host-header check from blocking institutional hostnames; a new `preview` config block mirrors `server` so `npm run build && npm run preview` is reachable through the same proxy URL — recommended over `npm run dev` for subpath-proxy environments where Vite-dev-internal absolute paths (`/@vite/client` etc.) wouldn't survive the proxy. See [`webui/README.md`](webui/README.md#remote-server-access).
-
-## New in v0.2.2
-
-- **Local model deployment**: alongside the existing remote API path, you can now run models locally via `LocalHFChatClient` (in-process `transformers`) or `LocalVLLMChatClient` (CargoDash spawns `vllm serve` as a subprocess and tears it down on exit). The pipeline opens every model up-front and shares one loaded instance across all referencing nodes, so duplicate-load OOMs never happen. See [Model deployment](#model-deployment).
-- **WebUI: `ModelSpec` node** — a floating node (like `Vote`) that declares a model once; `LLMCall` references it from a dropdown. Codegen emits one top-level client singleton, naturally enforcing single-load.
-
-## New in v0.2.1
-
-- **WebUI visual pipeline editor (preview)**: drag nodes onto a canvas, wire them up, fill in parameters, and export `pipeline.py` in one click — build a pipeline without writing Python. See the [WebUI](#webui-visual-pipeline-editor) section below.
-
-## New in v0.2
-
-- **`LLMCall` — one-line LLM nodes**: just `prompt + model + api_key` produces a callable you can drop into a `Processor`. Set `base_url` to any OpenAI-compatible gateway (DeepSeek / Moonshot / Zhipu / vLLM / SGLang / Ollama, etc.).
-- **`ChatClient` protocol layer**: extracted `ChatClient` / `OpenAICompatChatClient` / `MockChatClient`. Adding native vLLM / SGLang protocols only requires a new subclass.
-- **`Processor` collapsed to a single class**: the old `MapProcessor` is merged in, with `mode="sample"` (default) / `mode="batch"`. Calling LLMs uses `mode="sample" + intra_batch_workers=N` for batch-internal concurrency.
-- **Execution fault-tolerance fix**: when any node raises, the executor guarantees SENTINEL propagation to all downstreams and switches to drain mode on entry queues — no more cascading deadlock. The error is re-raised verbatim.
+**Latest:** v1.0.0 — first stable release. Release notes in [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -216,11 +191,7 @@ CargoDash/
 
 ## Roadmap
 
-Done in v0.2: core DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI-compat client / node-failure tolerance.  
-Done in v0.2.1: WebUI visual editor + one-way `pipeline.py` codegen.  
-Done in v0.2.2: local-model deployment (`LocalHFChatClient` + `LocalVLLMChatClient`); `ChatClient.open()` / `close()` lifecycle; WebUI `ModelSpec` floating node.  
-Done in v0.2.3: WebUI dev/preview config for editor-port-forwarded remote-server access (relative-base, host allow-list, preview block).  
-Done in v1.0.0: first stable release — SemVer compatibility guarantee; `unittest` test suite; GitHub Actions CI; single-sourced version.
+Release history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 Up next, in priority order:
 

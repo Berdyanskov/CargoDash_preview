@@ -26,7 +26,7 @@ export function defaultNodeData(kind, id) {
                 kind,
                 varName,
                 mode: "sample",
-                fnSource: "def my_fn(row):\n    # row is a dict; return dict / list[dict] / None\n    return row\n",
+                fnSource: "def my_fn(row):\n    # row is a dict; return dict / list[dict] / None.\n    # Fan-in: upstream identity is not exposed here — if your fn needs to\n    # tell upstreams apart, stamp a source tag (e.g. row['src'] = 'a') in\n    # each upstream's output before they converge.\n    return row\n",
                 fnName: "my_fn",
                 intraBatchWorkers: 1,
                 inputSchema: defaultSchema(),

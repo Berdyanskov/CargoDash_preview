@@ -8,32 +8,7 @@
 
 CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大模型训练数据合成 / 增强流水线的 Python 库。核心理念：任何数据处理流水线都可以由**顺序**与**分支**两类原语嵌套组合而成。
 
-## v1.0.0 新增
-
-- **首个正式稳定版。** 公共 API 自此受[语义化版本](https://semver.org/lang/zh-CN/)兼容性保证约束，详见文首说明。
-- **测试套件**：[`tests/`](tests/) 下基于 `unittest` 的测试，覆盖 `Schema`、构图、Pipeline schema 校验、`Processor` / `Judge` / `Vote`、`LLMCall` 以及执行器端到端运行。运行 `python -m unittest discover -s tests` 即可（无需额外依赖）。
-- **持续集成**：GitHub Actions 在每次 push 与 PR 上跨 Python 3.10 / 3.11 / 3.12 运行测试。
-- **版本号单一来源**：包版本号仅在 `cargodash/__init__.py` 中定义一次，由构建后端动态读取。
-
-## v0.2.3 新增
-
-- **WebUI 远程服务器访问适配**。dev server 配置现已对编辑器端口转发场景做了适配：`base: './'` 让所有资源 URL 走相对路径（同时兼容 `xxx-5173.devtunnels.ms/` 这种根子域名隧道和 `<host>/<...>/proxy/5173/` 这种子路径代理）；`server.allowedHosts: true` 关掉 Vite 5.x 默认的 Host header 校验，避免被机构域名拦截；新增 `preview` 配置块与 `server` 对齐，子路径代理环境下推荐 `npm run build && npm run preview`（取代 `npm run dev`），因为 dev 模式会注入 `/@vite/client` 等 `base` 配置管不到的绝对路径资源，过不了子路径代理。详见 [`webui/README.md`](webui/README.md#remote-server-access)。
-
-## v0.2.2 新增
-
-- **本地模型部署**：除了原有的远程 API 调用，现在可通过 `LocalHFChatClient`（进程内 `transformers`）或 `LocalVLLMChatClient`（CargoDash 拉起 `vllm serve` 子进程、退出时自动回收）跑本地模型。Pipeline 在执行器启动前统一 `open()` 所有 client，多个节点引用同一 client 时框架按对象身份去重，永远只加载一次，避免重复加载把显存撑爆。详见 [模型部署](#模型部署)。
-- **WebUI：`ModelSpec` 节点**——一类悬浮于 DAG 之外的节点（类比 `Vote`），声明一次模型，`LLMCall` 通过下拉框引用；导出时 codegen 生成顶层 client 单例变量，天然保证"一次加载，多处共用"。
-
-## v0.2.1 新增
-
-- **WebUI 可视化构图（preview）**：浏览器内拖拽节点、连线、配置参数，一键导出 `pipeline.py`，不会写代码也能搭流水线。详见下方 [WebUI（可视化构图）](#webui可视化构图) 小节。
-
-## v0.2 新增
-
-- **`LLMCall` —— 调模型即一行**：仅需 `prompt + model + api_key`，即可得到一个可塞进 `Processor` 的节点函数；`base_url` 切到 OpenAI 兼容网关（DeepSeek / Moonshot / 智谱 / vLLM / SGLang / Ollama）皆可
-- **`ChatClient` 协议层**：抽出 `ChatClient` / `OpenAICompatChatClient` / `MockChatClient`，后续接原生 vLLM、SGLang 协议时只需新增子类
-- **`Processor` 简化为单一类**：合并旧 `MapProcessor`，新增 `mode="sample"`（默认）/ `mode="batch"` 两种模式；调 LLM 走 `mode="sample" + intra_batch_workers=N` 并发
-- **执行容错修复**：任一节点抛异常时，executor 保证 SENTINEL 推到全部下游 + 进入 drain 模式排空入口队列，不再级联死锁；错误最终原样上抛
+**当前版本：** v1.0.0 —— 首个正式稳定版。发布说明见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 特性
 
@@ -211,11 +186,7 @@ CargoDash/
 
 ## Roadmap
 
-v0.2 已完成：核心 DAG / Schema / streaming + backpressure / `LLMCall` + OpenAI 兼容 client / 节点失败容错。  
-v0.2.1 已完成：WebUI 可视化构图 + 单向 codegen 导出 `pipeline.py`。  
-v0.2.2 已完成：本地模型部署（`LocalHFChatClient` + `LocalVLLMChatClient`）、`ChatClient.open()` / `close()` 生命周期、WebUI `ModelSpec` 悬浮节点。  
-v0.2.3 已完成：WebUI dev/preview 配置适配编辑器端口转发的远程访问场景（相对 `base`、host 白名单、`preview` 配置块）。  
-v1.0.0 已完成：首个正式稳定版——SemVer 兼容性保证、`unittest` 测试套件、GitHub Actions CI、版本号单一来源。
+发布历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 后续按优先级：
 

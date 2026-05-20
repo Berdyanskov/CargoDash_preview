@@ -1,21 +1,31 @@
-"""Pipeline: walks the DAG from a source, validates schema, runs it."""
+"""Pipeline: walks the DAG from one or more sources, validates schema, runs it."""
 from __future__ import annotations
-from typing import Iterator, List
+from typing import Iterable, Iterator, List, Union
 
 from .module import Module
 
 
 class Pipeline:
-    def __init__(self, source: Module):
-        self.source = source
-        self.nodes: List[Module] = self._collect_nodes(source)
+    def __init__(self, source: Union[Module, Iterable[Module]]):
+        if isinstance(source, Module):
+            self.sources: List[Module] = [source]
+        else:
+            self.sources = list(source)
+            if not self.sources:
+                raise ValueError("Pipeline requires at least one source module")
+            for s in self.sources:
+                if not isinstance(s, Module):
+                    raise TypeError(
+                        f"Pipeline source must be a Module, got {type(s).__name__}"
+                    )
+        self.nodes: List[Module] = self._collect_nodes(self.sources)
         self._validate_schemas()
 
     @staticmethod
-    def _collect_nodes(source: Module) -> List[Module]:
+    def _collect_nodes(sources: List[Module]) -> List[Module]:
         seen: list[Module] = []
         seen_ids: set[int] = set()
-        stack = [source]
+        stack: list[Module] = list(sources)
         while stack:
             node = stack.pop()
             if id(node) in seen_ids:

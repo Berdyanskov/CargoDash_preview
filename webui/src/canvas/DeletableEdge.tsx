@@ -10,6 +10,12 @@ import {
 // Smooth-step edge with a small × button shown on hover or when selected.
 // React Flow's default Backspace/Delete shortcut still works; this is just
 // the discoverable affordance.
+//
+// When the same (source, sourceHandle) has ≥ 2 outgoing edges, every
+// downstream receives the same batch — i.e. broadcast/tee semantics,
+// distinct from Judge-style routing on .on_true / .on_false. We mark
+// such edges in amber and tag them with a small "broadcast" chip so
+// users don't mistake them for a router that doesn't exist.
 export function DeletableEdge({
   id,
   sourceX,
@@ -21,7 +27,8 @@ export function DeletableEdge({
   style,
   markerEnd,
   selected,
-}: EdgeProps) {
+  data,
+}: EdgeProps<{ isBroadcast?: boolean }>) {
   const { setEdges } = useReactFlow();
   const [hover, setHover] = useState(false);
 
@@ -35,6 +42,12 @@ export function DeletableEdge({
   });
 
   const visible = hover || selected;
+  const isBroadcast = !!data?.isBroadcast;
+  const strokeColor = selected
+    ? "#0284c7"
+    : isBroadcast
+    ? "#f59e0b"
+    : style?.stroke ?? "#94a3b8";
 
   return (
     <>
@@ -44,8 +57,9 @@ export function DeletableEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: selected ? "#0284c7" : style?.stroke ?? "#94a3b8",
-          strokeWidth: selected ? 2 : 1.5,
+          stroke: strokeColor,
+          strokeWidth: selected ? 2 : isBroadcast ? 2 : 1.5,
+          strokeDasharray: isBroadcast ? "6 3" : undefined,
         }}
       />
       {/* Wider invisible hit-target so the × is easy to grab. */}
@@ -59,6 +73,23 @@ export function DeletableEdge({
         style={{ pointerEvents: "stroke" }}
       />
       <EdgeLabelRenderer>
+        {isBroadcast && (
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY - 14}px)`,
+              pointerEvents: "none",
+            }}
+            className="nodrag nopan"
+          >
+            <span
+              title="Broadcast: this source's output is copied to every downstream on this port. Use Judge to route by condition instead."
+              className="px-1.5 py-px rounded bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-medium leading-none whitespace-nowrap shadow-sm"
+            >
+              broadcast
+            </span>
+          </div>
+        )}
         <div
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}

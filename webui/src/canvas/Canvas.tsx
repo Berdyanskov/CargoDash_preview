@@ -49,11 +49,28 @@ export function Canvas() {
     [],
   );
 
+  // Flag edges that share a (source, sourceHandle) with siblings — these
+  // broadcast the same batch to every downstream. We annotate so
+  // DeletableEdge can render them distinctly (broadcast is correct but
+  // easy to confuse with Judge-style routing).
+  const enrichedEdges = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of edges) {
+      const k = `${e.source}::${e.sourceHandle ?? ""}`;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    return edges.map((e) => {
+      const k = `${e.source}::${e.sourceHandle ?? ""}`;
+      const isBroadcast = (counts.get(k) ?? 0) >= 2;
+      return { ...e, data: { ...(e.data ?? {}), isBroadcast } };
+    });
+  }, [edges]);
+
   return (
     <div ref={wrapperRef} className="h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={enrichedEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
