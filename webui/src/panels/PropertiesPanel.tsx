@@ -297,6 +297,21 @@ function ProcessorLLMFields({
           }
         />
       </Field>
+      <div className="text-[10.5px] leading-snug text-slate-500 -mt-1">
+        Passed through to the underlying SDK as kwargs; not validated. Use
+        OpenAI-style names (<code className="font-mono">temperature</code>,{" "}
+        <code className="font-mono">max_tokens</code>,{" "}
+        <code className="font-mono">top_p</code>, …) for remote /
+        vLLM-served ModelSpecs. The <code className="font-mono">local_hf</code>{" "}
+        backend goes through <code className="font-mono">transformers.generate</code>,
+        so use HF names (<code className="font-mono">max_new_tokens</code>,{" "}
+        <code className="font-mono">do_sample</code>, …); OpenAI-only kwargs
+        like <code className="font-mono">frequency_penalty</code> will be
+        rejected. Vendor-specific extras (e.g. DeepSeek{" "}
+        <code className="font-mono">enable_search</code>, Qwen{" "}
+        <code className="font-mono">enable_thinking</code>) are forwarded
+        as-is — typos surface at runtime, not export time.
+      </div>
     </>
   );
 }
