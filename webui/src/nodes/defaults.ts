@@ -32,10 +32,19 @@ export function defaultNodeData(kind: NodeKind, id: string): AnyNodeData {
       return {
         kind,
         varName,
+        llmMode: false,
+        // Code-mode defaults
         mode: "sample",
         fnSource:
           "def my_fn(row):\n    # row is a dict; return dict / list[dict] / None.\n    # Fan-in: upstream identity is not exposed here — if your fn needs to\n    # tell upstreams apart, stamp a source tag (e.g. row['src'] = 'a') in\n    # each upstream's output before they converge.\n    return row\n",
         fnName: "my_fn",
+        // LLM-mode defaults (used only when llmMode is flipped to true).
+        // modelNodeId is empty until the user picks a ModelSpec; codegen
+        // will surface a helpful error if they try to export without one.
+        llmPrompt: "Rewrite this sentence: {text}",
+        llmOutputField: "text",
+        llmClient: { mode: "modelRef", modelNodeId: "" },
+        llmGenKwargs: "{}",
         intraBatchWorkers: 1,
         inputSchema: defaultSchema(),
         outputSchema: defaultSchema(),
@@ -66,23 +75,6 @@ export function defaultNodeData(kind: NodeKind, id: string): AnyNodeData {
           },
         ],
         trueNum: 1,
-      };
-    case "LLMCall":
-      return {
-        kind,
-        varName,
-        prompt: "Rewrite this sentence: {text}",
-        outputField: "text",
-        client: {
-          mode: "inline",
-          model: "gpt-4.1-mini",
-          apiKey: "",
-          baseUrl: "",
-        },
-        genKwargs: "{}",
-        intraBatchWorkers: 4,
-        inputSchema: defaultSchema(),
-        outputSchema: defaultSchema(),
       };
     case "ModelSpec":
       return {

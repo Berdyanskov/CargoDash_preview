@@ -143,9 +143,11 @@ If you'd rather not write Python by hand, starting with v0.2.1 CargoDash ships a
   <img src="assets/images/webui1.png" alt="CargoDash WebUI" width="900">
 </p>
 
-**Supported nodes**: `RawDataSource` / `DataOutput` / `Processor` / `Judge` / `Vote` / `LLMCall` / `ModelSpec`, one-to-one with the Python API. `Judge` exposes two output ports (`on_true` / `on_false`). `Vote` and `ModelSpec` are not wired by edges — `Vote` is referenced from a `Judge`'s properties panel; `ModelSpec` (kind ∈ remote / local_hf / local_vllm) is referenced from `LLMCall`'s "client source" dropdown and emitted as a top-level singleton at export time, so multiple `LLMCall`s sharing one big local model load it exactly once.
+**Supported nodes**: `RawDataSource` / `DataOutput` / `Processor` / `Judge` / `Vote` / `ModelSpec`. `Judge` exposes two output ports (`on_true` / `on_false`). `Vote` and `ModelSpec` are not wired by edges — `Vote` is referenced from a `Judge`'s properties panel; `ModelSpec` (kind ∈ remote / local_hf / local_vllm) is referenced from any Processor (in LLM mode) or any user fn that calls `<var>.chat(...)`, and is emitted as a top-level singleton at export time so multiple references to the same `ModelSpec` share one loaded model.
 
-**User-defined functions**: `Processor.fn` / `Judge.predicate(code)` / `Vote.model_list[*]` are written directly in a Monaco editor inside each node's properties panel; they are emitted as top-level `def` blocks at the top of the generated `.py`. `LLMCall` uses a fully structured form instead.
+**Processor has an "LLM mode" toggle**: flip it on and the Processor's fn becomes a structured `LLMCall(prompt=..., output_field=..., client=...)` instead of user-authored Python. Conceptually it's still a Processor; the toggle is a UI shortcut for the most common pattern ("one row in → one LLM call → row with an extra field"). Off mode = the regular Monaco fn editor.
+
+**User-defined functions**: `Processor.fn` (LLM-mode off) / `Judge.predicate(code)` / `Vote.model_list[*]` are written directly in a Monaco editor inside each node's properties panel; they are emitted as top-level `def` blocks at the top of the generated `.py`.
 
 **Project file**: `.cdgraph.json` is the source of truth for the graph and supports export / import for further editing. `pipeline.py` is a one-way export — regenerate it from the `.cdgraph.json` rather than hand-editing.
 

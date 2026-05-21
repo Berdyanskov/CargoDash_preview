@@ -3,7 +3,6 @@ import { DataOutputNode } from "./DataOutputNode";
 import { ProcessorNode } from "./ProcessorNode";
 import { JudgeNode } from "./JudgeNode";
 import { VoteNode } from "./VoteNode";
-import { LLMCallNode } from "./LLMCallNode";
 import { ModelSpecNode } from "./ModelSpecNode";
 export const nodeTypes = {
     RawDataSource: RawDataSourceNode,
@@ -11,7 +10,6 @@ export const nodeTypes = {
     Processor: ProcessorNode,
     Judge: JudgeNode,
     Vote: VoteNode,
-    LLMCall: LLMCallNode,
     ModelSpec: ModelSpecNode,
 };
 export const nodeKinds = [
@@ -20,7 +18,6 @@ export const nodeKinds = [
     "Processor",
     "Judge",
     "Vote",
-    "LLMCall",
     "ModelSpec",
 ];
 export const nodeAccent = {
@@ -29,6 +26,5 @@ export const nodeAccent = {
     Processor: "bg-sky-600",
     Judge: "bg-amber-600",
     Vote: "bg-violet-600",
-    LLMCall: "bg-indigo-600",
     ModelSpec: "bg-fuchsia-600",
 };

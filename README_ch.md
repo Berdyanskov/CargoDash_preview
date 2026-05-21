@@ -138,9 +138,11 @@ pip install cargodash[local-vllm]  # LocalVLLMChatClient
   <img src="assets/images/webui1.png" alt="CargoDash WebUI" width="900">
 </p>
 
-**支持的节点**：`RawDataSource` / `DataOutput` / `Processor` / `Judge` / `Vote` / `LLMCall` / `ModelSpec`，与 Python API 一一对应。`Judge` 自带 `on_true` / `on_false` 两个输出端口；`Vote` 与 `ModelSpec` 都不连边——`Vote` 由 `Judge` 在属性面板里引用并在导出时内联到 `Judge(Vote(...), ...)`；`ModelSpec`（kind ∈ remote / local_hf / local_vllm）由 `LLMCall` 在 "client source" 下拉里引用，导出时作为顶层 client 单例变量发射，保证多处共用同一份大模型权重只加载一次。
+**支持的节点**：`RawDataSource` / `DataOutput` / `Processor` / `Judge` / `Vote` / `ModelSpec`。`Judge` 自带 `on_true` / `on_false` 两个输出端口；`Vote` 与 `ModelSpec` 都不连边——`Vote` 由 `Judge` 在属性面板里引用并在导出时内联到 `Judge(Vote(...), ...)`；`ModelSpec`（kind ∈ remote / local_hf / local_vllm）由任何 LLM 模式 Processor 在 "client source" 下拉里引用，或者由任意用户 fn 通过变量名 `<var>.chat(...)` 调用，导出时作为顶层 client 单例变量发射，保证多处共用同一份大模型权重只加载一次。
 
-**用户自定义函数**：`Processor.fn` / `Judge.predicate(code)` / `Vote.model_list[*]` 直接在节点属性面板的 Monaco 编辑器里写 Python，导出时作为顶级 `def` 块前置到生成的 `.py` 中；`LLMCall` 则全部用结构化表单填写。
+**Processor 节点的 "LLM 模式" 开关**：打开后 Processor 的 fn 直接变成结构化的 `LLMCall(prompt=..., output_field=..., client=...)`，而不是手写 Python。本质上这仍是一个 Processor 节点；开关只是把最常见模式 ("一行 in → 调一次模型 → 加一个字段") 提到 UI 表单上。关闭则是正常的 Monaco fn 编辑器。
+
+**用户自定义函数**：`Processor.fn`（LLM 模式关闭时）/ `Judge.predicate(code)` / `Vote.model_list[*]` 直接在节点属性面板的 Monaco 编辑器里写 Python，导出时作为顶级 `def` 块前置到生成的 `.py` 中。
 
 **工程文件**：`.cdgraph.json` 是图状态的真值，支持导出 / 导入用于二次编辑；`pipeline.py` 是单向导出产物，建议从 `.cdgraph.json` 重新生成而不是手改。
 

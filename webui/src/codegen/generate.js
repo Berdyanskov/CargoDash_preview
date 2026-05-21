@@ -143,6 +143,41 @@ function emitVoteCtor(data, fnNamesByVoteId, voteId) {
     const names = fnNamesByVoteId.get(voteId) ?? [];
     return `Vote(model_list=[${names.join(", ")}], true_num=${data.trueNum})`;
 }
+/** Emit a ``LLMCall(prompt=..., client=<modelspec_var>, ...)`` Python
+ * literal for an LLM-mode Processor. The client is always resolved
+ * from a ModelSpec node — inline (model+api_key inlined on the
+ * Processor) was removed; all model declarations are first-class
+ * nodes. */
+function emitLLMCallCtor(d, varName, modelVarByNodeId) {
+    const llmArgs = [
+        `prompt=${pyStr(d.llmPrompt)}`,
+        `output_field=${pyStr(d.llmOutputField)}`,
+    ];
+    const modelVar = modelVarByNodeId.get(d.llmClient.modelNodeId);
+    if (!modelVar) {
+        throw new CodegenError(`Processor "${varName}" (LLM mode) needs a ModelSpec node — pick ` +
+            `one in the "model spec" dropdown (or drop a ModelSpec on the canvas first)`);
+    }
+    llmArgs.push(`client=${modelVar}`);
+    const raw = d.llmGenKwargs.trim();
+    if (raw && raw !== "{}") {
+        let parsedKwargs;
+        try {
+            parsedKwargs = JSON.parse(raw);
+        }
+        catch {
+            throw new CodegenError(`Processor ${varName} (LLM mode): gen_kwargs must be valid JSON`);
+        }
+        if (typeof parsedKwargs !== "object" || Array.isArray(parsedKwargs)) {
+            throw new CodegenError(`Processor ${varName} (LLM mode): gen_kwargs must be a JSON object`);
+        }
+        for (const [k, v] of Object.entries(parsedKwargs)) {
+            checkIdent(k, "gen_kwargs key");
+            llmArgs.push(`${k}=${jsonValueToPy(v)}`);
+        }
+    }
+    return `LLMCall(${llmArgs.join(", ")})`;
+}
 function emitNodeCtor(id, data, varName, schemas, fnNamesByNode, voteCtorByJudgeId, modelVarByNodeId) {
     switch (data.kind) {
         case "RawDataSource": {
@@ -157,9 +192,22 @@ function emitNodeCtor(id, data, varName, schemas, fnNamesByNode, voteCtorByJudge
         }
         case "Processor": {
             const d = data;
-            const fn = fnNamesByNode.get(id);
             const inSch = getSchemaVar(schemas, d.inputSchema);
             const outSch = getSchemaVar(schemas, d.outputSchema);
+            if (d.llmMode) {
+                // LLM-mode Processor: fn is `LLMCall(...)`, no user-authored fn
+                // def is emitted (LLMCall replaces it). Sample mode is implied
+                // — LLMCall always processes per-row.
+                const llmCtor = emitLLMCallCtor(d, varName, modelVarByNodeId);
+                const procArgs = [
+                    llmCtor,
+                    `input_schema=${inSch}`,
+                    `output_schema=${outSch}`,
+                    `intra_batch_workers=${d.intraBatchWorkers}`,
+                ];
+                return `${varName} = Processor(${procArgs.join(", ")})`;
+            }
+            const fn = fnNamesByNode.get(id);
             const args = [
                 fn,
                 `mode=${pyStr(d.mode)}`,
@@ -182,54 +230,6 @@ function emitNodeCtor(id, data, varName, schemas, fnNamesByNode, voteCtorByJudge
                 `intra_batch_workers=${d.intraBatchWorkers}`,
             ];
             return `${varName} = Judge(${args.join(", ")})`;
-        }
-        case "LLMCall": {
-            const d = data;
-            const inSch = getSchemaVar(schemas, d.inputSchema);
-            const outSch = getSchemaVar(schemas, d.outputSchema);
-            const llmArgs = [
-                `prompt=${pyStr(d.prompt)}`,
-                `output_field=${pyStr(d.outputField)}`,
-            ];
-            if (d.client.mode === "inline") {
-                llmArgs.push(`model=${pyStr(d.client.model)}`);
-                llmArgs.push(`api_key=${pyStr(d.client.apiKey)}`);
-                if (d.client.baseUrl.trim()) {
-                    llmArgs.push(`base_url=${pyStr(d.client.baseUrl)}`);
-                }
-            }
-            else {
-                const modelVar = modelVarByNodeId.get(d.client.modelNodeId);
-                if (!modelVar) {
-                    throw new CodegenError(`LLMCall "${varName}" references unknown ModelSpec node id ` +
-                        `${d.client.modelNodeId || "(none)"}`);
-                }
-                llmArgs.push(`client=${modelVar}`);
-            }
-            let parsedKwargs = {};
-            const raw = d.genKwargs.trim();
-            if (raw && raw !== "{}") {
-                try {
-                    parsedKwargs = JSON.parse(raw);
-                }
-                catch {
-                    throw new CodegenError(`LLMCall ${varName}: gen_kwargs must be valid JSON`);
-                }
-                if (typeof parsedKwargs !== "object" || Array.isArray(parsedKwargs)) {
-                    throw new CodegenError(`LLMCall ${varName}: gen_kwargs must be a JSON object`);
-                }
-                for (const [k, v] of Object.entries(parsedKwargs)) {
-                    checkIdent(k, "gen_kwargs key");
-                    llmArgs.push(`${k}=${jsonValueToPy(v)}`);
-                }
-            }
-            const procArgs = [
-                `LLMCall(${llmArgs.join(", ")})`,
-                `input_schema=${inSch}`,
-                `output_schema=${outSch}`,
-                `intra_batch_workers=${d.intraBatchWorkers}`,
-            ];
-            return `${varName} = Processor(${procArgs.join(", ")})`;
         }
         case "Vote":
             // Should not be called: Vote nodes are inlined at Judge ctor time.
@@ -375,7 +375,8 @@ export function generatePython(project, options = {}) {
     };
     for (const n of project.nodes) {
         const v = varNames.get(n.id);
-        if (n.data.kind === "Processor") {
+        if (n.data.kind === "Processor" && !n.data.llmMode) {
+            // LLM-mode Processors don't emit a user fn def — LLMCall is the fn.
             const declared = extractFnName(n.data.fnSource, `${v}_fn`);
             const final = claimFnName(declared, `${v}_fn`);
             fnNamesByNode.set(n.id, final);

@@ -3,10 +3,9 @@ import { nodeAccent, nodeKinds } from "../nodes";
 const descriptions = {
     RawDataSource: "jsonl input source",
     DataOutput: "jsonl sink",
-    Processor: "user-defined fn (sample/batch mode)",
+    Processor: "user-defined fn — toggle LLM mode for single-turn LLM calls",
     Judge: "split on_true / on_false",
     Vote: "multi-model vote (referenced by Judge)",
-    LLMCall: "single-turn LLM call",
     ModelSpec: "model deployment (remote / local HF / local vLLM)",
 };
 export function NodePalette() {

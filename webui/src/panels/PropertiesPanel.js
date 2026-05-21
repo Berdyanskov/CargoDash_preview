@@ -13,7 +13,7 @@ export function PropertiesPanel() {
     }
     const data = node.data;
     const patch = (p) => updateNodeData(node.id, p);
-    return (_jsxs("div", { className: "h-full overflow-y-auto p-3 space-y-3", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { children: [_jsx("div", { className: "text-xs text-slate-400", children: data.kind }), _jsx("div", { className: "text-sm font-semibold", children: data.varName })] }), _jsx("button", { onClick: () => deleteNode(node.id), className: "text-[11px] text-rose-600 hover:underline", children: "delete" })] }), _jsx(Field, { label: "variable name", children: _jsx(TextInput, { value: data.varName, onChange: (v) => patch({ varName: v }) }) }), data.kind === "RawDataSource" && (_jsx(RawDataSourceForm, { data: data, onPatch: patch })), data.kind === "DataOutput" && (_jsx(DataOutputForm, { data: data, onPatch: patch })), data.kind === "Processor" && (_jsx(ProcessorForm, { data: data, onPatch: patch })), data.kind === "Judge" && _jsx(JudgeForm, { data: data, onPatch: patch }), data.kind === "Vote" && _jsx(VoteForm, { data: data, onPatch: patch }), data.kind === "LLMCall" && _jsx(LLMCallForm, { data: data, onPatch: patch }), data.kind === "ModelSpec" && (_jsx(ModelSpecForm, { data: data, onPatch: patch }))] }));
+    return (_jsxs("div", { className: "h-full overflow-y-auto p-3 space-y-3", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { children: [_jsx("div", { className: "text-xs text-slate-400", children: data.kind }), _jsx("div", { className: "text-sm font-semibold", children: data.varName })] }), _jsx("button", { onClick: () => deleteNode(node.id), className: "text-[11px] text-rose-600 hover:underline", children: "delete" })] }), _jsx(Field, { label: "variable name", children: _jsx(TextInput, { value: data.varName, onChange: (v) => patch({ varName: v }) }) }), data.kind === "RawDataSource" && (_jsx(RawDataSourceForm, { data: data, onPatch: patch })), data.kind === "DataOutput" && (_jsx(DataOutputForm, { data: data, onPatch: patch })), data.kind === "Processor" && (_jsx(ProcessorForm, { data: data, onPatch: patch })), data.kind === "Judge" && _jsx(JudgeForm, { data: data, onPatch: patch }), data.kind === "Vote" && _jsx(VoteForm, { data: data, onPatch: patch }), data.kind === "ModelSpec" && (_jsx(ModelSpecForm, { data: data, onPatch: patch }))] }));
 }
 function RawDataSourceForm({ data, onPatch, }) {
     return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "path", children: _jsx(TextInput, { value: data.path, onChange: (v) => onPatch({ path: v }) }) }), _jsx(Field, { label: "batch_size", children: _jsx(NumberInput, { value: data.batchSize, min: 1, onChange: (v) => onPatch({ batchSize: v }) }) }), _jsx(SchemaEditor, { label: "schema", value: data.schema, onChange: (v) => onPatch({ schema: v }) })] }));
@@ -22,7 +22,27 @@ function DataOutputForm({ data, onPatch, }) {
     return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "path", children: _jsx(TextInput, { value: data.path, onChange: (v) => onPatch({ path: v }) }) }), _jsx(Checkbox, { label: "preserve_order", value: data.preserveOrder, onChange: (v) => onPatch({ preserveOrder: v }) }), _jsx(SchemaEditor, { label: "schema", value: data.schema, onChange: (v) => onPatch({ schema: v }) })] }));
 }
 function ProcessorForm({ data, onPatch, }) {
-    return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "mode", children: _jsx(Select, { value: data.mode, options: ["sample", "batch"], onChange: (v) => onPatch({ mode: v }) }) }), _jsx(Field, { label: "intra_batch_workers", children: _jsx(NumberInput, { value: data.intraBatchWorkers, min: 1, onChange: (v) => onPatch({ intraBatchWorkers: v }) }) }), _jsx(Field, { label: "fn name (must match def in code below)", children: _jsx(TextInput, { value: data.fnName, onChange: (v) => onPatch({ fnName: v }) }) }), _jsx(CodeField, { label: "fn source", value: data.fnSource, onChange: (v) => onPatch({ fnSource: v }), height: 200 }), _jsx(SchemaEditor, { label: "input_schema", value: data.inputSchema, onChange: (v) => onPatch({ inputSchema: v }) }), _jsx(SchemaEditor, { label: "output_schema", value: data.outputSchema, onChange: (v) => onPatch({ outputSchema: v }) })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(Checkbox, { label: "LLM mode (use LLMCall as fn)", value: data.llmMode, onChange: (v) => onPatch({ llmMode: v }) }), _jsx(Field, { label: "intra_batch_workers", children: _jsx(NumberInput, { value: data.intraBatchWorkers, min: 1, onChange: (v) => onPatch({ intraBatchWorkers: v }) }) }), data.llmMode ? (_jsx(ProcessorLLMFields, { data: data, onPatch: onPatch })) : (_jsx(ProcessorCodeFields, { data: data, onPatch: onPatch })), _jsx(SchemaEditor, { label: "input_schema", value: data.inputSchema, onChange: (v) => onPatch({ inputSchema: v }) }), _jsx(SchemaEditor, { label: "output_schema", value: data.outputSchema, onChange: (v) => onPatch({ outputSchema: v }) })] }));
+}
+function ProcessorCodeFields({ data, onPatch, }) {
+    return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "mode", children: _jsx(Select, { value: data.mode, options: ["sample", "batch"], onChange: (v) => onPatch({ mode: v }) }) }), _jsx(Field, { label: "fn name (must match def in code below)", children: _jsx(TextInput, { value: data.fnName, onChange: (v) => onPatch({ fnName: v }) }) }), _jsx(CodeField, { label: "fn source", value: data.fnSource, onChange: (v) => onPatch({ fnSource: v }), height: 200 })] }));
+}
+function ProcessorLLMFields({ data, onPatch, }) {
+    const modelSpecs = useGraphStore((s) => s.nodes.filter((n) => n.data.kind === "ModelSpec"));
+    const createNode = useGraphStore((s) => s.createNode);
+    const onCreateNewModelSpec = () => {
+        // Drop the new ModelSpec at a fixed canvas-space offset; the user
+        // will reposition. Selection is intentionally NOT switched (see
+        // `createNode` vs `addNode`) so the user stays on the Processor
+        // they're configuring.
+        const id = createNode("ModelSpec", { x: 100, y: 100 });
+        onPatch({
+            llmClient: { mode: "modelRef", modelNodeId: id },
+        });
+    };
+    return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "model spec", children: _jsxs("div", { className: "flex items-center gap-1", children: [_jsxs("select", { value: data.llmClient.modelNodeId, onChange: (e) => onPatch({
+                                llmClient: { mode: "modelRef", modelNodeId: e.target.value },
+                            }), className: "flex-1 text-xs px-2 py-1 border rounded", children: [_jsx("option", { value: "", children: "\u2014 pick a ModelSpec node \u2014" }), modelSpecs.map((n) => (_jsxs("option", { value: n.id, children: [n.data.varName, " (", n.data.modelKind, ")"] }, n.id)))] }), _jsx("button", { onClick: onCreateNewModelSpec, title: "Create a fresh ModelSpec node (remote kind) and reference it here", className: "text-[11px] px-2 py-1 rounded border border-slate-300 text-sky-700 hover:bg-sky-50 whitespace-nowrap", children: "+ new" })] }) }), _jsx(Field, { label: "output_field", children: _jsx(TextInput, { value: data.llmOutputField, onChange: (v) => onPatch({ llmOutputField: v }) }) }), _jsx(Field, { label: "prompt template", children: _jsx(TextArea, { value: data.llmPrompt, rows: 4, onChange: (v) => onPatch({ llmPrompt: v }) }) }), _jsx(Field, { label: "gen_kwargs (JSON)", children: _jsx(TextArea, { value: data.llmGenKwargs, rows: 3, onChange: (v) => onPatch({ llmGenKwargs: v }) }) })] }));
 }
 function JudgeForm({ data, onPatch }) {
     const voteNodes = useGraphStore((s) => s.nodes.filter((n) => n.data.kind === "Vote"));
@@ -69,37 +89,6 @@ function VoteForm({ data, onPatch }) {
     });
     return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "true_num", children: _jsx(NumberInput, { value: data.trueNum, min: 1, onChange: (v) => onPatch({ trueNum: v }) }) }), _jsxs("div", { className: "space-y-3", children: [_jsx("div", { className: "text-[11px] uppercase tracking-wide text-slate-400", children: "model_list" }), data.models.map((m, i) => (_jsxs("div", { className: "border rounded p-2 space-y-2 bg-slate-50", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("input", { value: m.fnName, onChange: (e) => updateModel(i, { fnName: e.target.value }), className: "flex-1 text-xs px-2 py-1 border rounded", placeholder: "fn name" }), _jsx("button", { onClick: () => removeModel(i), className: "text-[11px] text-rose-600", children: "remove" })] }), _jsx(CodeField, { label: `model #${i + 1} source`, value: m.fnSource, onChange: (v) => updateModel(i, { fnSource: v }), height: 120 })] }, i))), _jsx("button", { onClick: addModel, className: "text-[11px] text-sky-600 hover:underline", children: "+ add model fn" })] })] }));
 }
-function LLMCallForm({ data, onPatch, }) {
-    const modelSpecs = useGraphStore((s) => s.nodes.filter((n) => n.data.kind === "ModelSpec"));
-    return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "client source", children: _jsx(Select, { value: data.client.mode, options: ["inline", "modelRef"], onChange: (mode) => {
-                        if (mode === "inline") {
-                            onPatch({
-                                client: {
-                                    mode: "inline",
-                                    model: "gpt-4.1-mini",
-                                    apiKey: "",
-                                    baseUrl: "",
-                                },
-                            });
-                        }
-                        else {
-                            onPatch({
-                                client: {
-                                    mode: "modelRef",
-                                    modelNodeId: modelSpecs[0]?.id ?? "",
-                                },
-                            });
-                        }
-                    } }) }), data.client.mode === "inline" ? (_jsxs(_Fragment, { children: [_jsx(Field, { label: "model", children: _jsx(TextInput, { value: data.client.model, onChange: (v) => onPatch({
-                                client: { ...data.client, model: v },
-                            }) }) }), _jsx(Field, { label: "api_key", children: _jsx(TextInput, { value: data.client.apiKey, onChange: (v) => onPatch({
-                                client: { ...data.client, apiKey: v },
-                            }), placeholder: "sk-..." }) }), _jsx(Field, { label: "base_url (optional)", children: _jsx(TextInput, { value: data.client.baseUrl, onChange: (v) => onPatch({
-                                client: { ...data.client, baseUrl: v },
-                            }), placeholder: "https://api.deepseek.com/v1" }) })] })) : (_jsx(Field, { label: "model spec", children: _jsxs("select", { value: data.client.modelNodeId, onChange: (e) => onPatch({
-                        client: { mode: "modelRef", modelNodeId: e.target.value },
-                    }), className: "w-full text-xs px-2 py-1 border rounded", children: [_jsx("option", { value: "", children: "\u2014 pick a ModelSpec node \u2014" }), modelSpecs.map((n) => (_jsxs("option", { value: n.id, children: [n.data.varName, " (", n.data.modelKind, ")"] }, n.id)))] }) })), _jsx(Field, { label: "output_field", children: _jsx(TextInput, { value: data.outputField, onChange: (v) => onPatch({ outputField: v }) }) }), _jsx(Field, { label: "prompt template", children: _jsx(TextArea, { value: data.prompt, rows: 4, onChange: (v) => onPatch({ prompt: v }) }) }), _jsx(Field, { label: "gen_kwargs (JSON)", children: _jsx(TextArea, { value: data.genKwargs, rows: 3, onChange: (v) => onPatch({ genKwargs: v }) }) }), _jsx(Field, { label: "intra_batch_workers", children: _jsx(NumberInput, { value: data.intraBatchWorkers, min: 1, onChange: (v) => onPatch({ intraBatchWorkers: v }) }) }), _jsx(SchemaEditor, { label: "input_schema", value: data.inputSchema, onChange: (v) => onPatch({ inputSchema: v }) }), _jsx(SchemaEditor, { label: "output_schema", value: data.outputSchema, onChange: (v) => onPatch({ outputSchema: v }) })] }));
-}
 function ModelSpecForm({ data, onPatch, }) {
     const setKind = (k) => onPatch({ modelKind: k });
     return (_jsxs(_Fragment, { children: [_jsx(Field, { label: "kind", children: _jsx(Select, { value: data.modelKind, options: ["remote", "local_hf", "local_vllm"], onChange: (v) => setKind(v) }) }), _jsx(Field, { label: "model (HF repo id, local path, or remote model name)", children: _jsx(TextInput, { value: data.model, onChange: (v) => onPatch({ model: v }), placeholder: data.modelKind === "remote"
@@ -127,7 +116,7 @@ function ModelSpecUsage({ varName }) {
 #        "image_url": {"url": "data:image/jpeg;base64,..."}}]}
 
 # Or, for the simple "fill a template, write reply to one field" case,
-# prefer the dedicated LLMCall node and pick this ModelSpec in its
+# flip the Processor's "LLM mode" toggle and pick this ModelSpec in its
 # "client source" dropdown — you get batch fan-out for free.`;
     const copy = () => {
         void navigator.clipboard?.writeText(snippet);

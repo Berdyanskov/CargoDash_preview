@@ -3,7 +3,6 @@ import type {
   AnyNodeData,
   DataOutputData,
   JudgeData,
-  LLMCallData,
   ModelKind,
   ModelSpecData,
   ProcessorData,
@@ -75,7 +74,6 @@ export function PropertiesPanel() {
       )}
       {data.kind === "Judge" && <JudgeForm data={data} onPatch={patch} />}
       {data.kind === "Vote" && <VoteForm data={data} onPatch={patch} />}
-      {data.kind === "LLMCall" && <LLMCallForm data={data} onPatch={patch} />}
       {data.kind === "ModelSpec" && (
         <ModelSpecForm data={data} onPatch={patch} />
       )}
@@ -156,13 +154,11 @@ function ProcessorForm({
 }) {
   return (
     <>
-      <Field label="mode">
-        <Select
-          value={data.mode}
-          options={["sample", "batch"]}
-          onChange={(v) => onPatch({ mode: v } as Partial<AnyNodeData>)}
-        />
-      </Field>
+      <Checkbox
+        label="LLM mode (use LLMCall as fn)"
+        value={data.llmMode}
+        onChange={(v) => onPatch({ llmMode: v } as Partial<AnyNodeData>)}
+      />
       <Field label="intra_batch_workers">
         <NumberInput
           value={data.intraBatchWorkers}
@@ -172,18 +168,11 @@ function ProcessorForm({
           }
         />
       </Field>
-      <Field label="fn name (must match def in code below)">
-        <TextInput
-          value={data.fnName}
-          onChange={(v) => onPatch({ fnName: v } as Partial<AnyNodeData>)}
-        />
-      </Field>
-      <CodeField
-        label="fn source"
-        value={data.fnSource}
-        onChange={(v) => onPatch({ fnSource: v } as Partial<AnyNodeData>)}
-        height={200}
-      />
+      {data.llmMode ? (
+        <ProcessorLLMFields data={data} onPatch={onPatch} />
+      ) : (
+        <ProcessorCodeFields data={data} onPatch={onPatch} />
+      )}
       <SchemaEditor
         label="input_schema"
         value={data.inputSchema}
@@ -198,6 +187,116 @@ function ProcessorForm({
           onPatch({ outputSchema: v } as Partial<AnyNodeData>)
         }
       />
+    </>
+  );
+}
+
+function ProcessorCodeFields({
+  data,
+  onPatch,
+}: {
+  data: ProcessorData;
+  onPatch: Patcher;
+}) {
+  return (
+    <>
+      <Field label="mode">
+        <Select
+          value={data.mode}
+          options={["sample", "batch"]}
+          onChange={(v) => onPatch({ mode: v } as Partial<AnyNodeData>)}
+        />
+      </Field>
+      <Field label="fn name (must match def in code below)">
+        <TextInput
+          value={data.fnName}
+          onChange={(v) => onPatch({ fnName: v } as Partial<AnyNodeData>)}
+        />
+      </Field>
+      <CodeField
+        label="fn source"
+        value={data.fnSource}
+        onChange={(v) => onPatch({ fnSource: v } as Partial<AnyNodeData>)}
+        height={200}
+      />
+    </>
+  );
+}
+
+function ProcessorLLMFields({
+  data,
+  onPatch,
+}: {
+  data: ProcessorData;
+  onPatch: Patcher;
+}) {
+  const modelSpecs = useGraphStore((s) =>
+    s.nodes.filter((n) => n.data.kind === "ModelSpec"),
+  );
+  const createNode = useGraphStore((s) => s.createNode);
+  const onCreateNewModelSpec = () => {
+    // Drop the new ModelSpec at a fixed canvas-space offset; the user
+    // will reposition. Selection is intentionally NOT switched (see
+    // `createNode` vs `addNode`) so the user stays on the Processor
+    // they're configuring.
+    const id = createNode("ModelSpec", { x: 100, y: 100 });
+    onPatch({
+      llmClient: { mode: "modelRef", modelNodeId: id },
+    } as Partial<AnyNodeData>);
+  };
+  return (
+    <>
+      <Field label="model spec">
+        <div className="flex items-center gap-1">
+          <select
+            value={data.llmClient.modelNodeId}
+            onChange={(e) =>
+              onPatch({
+                llmClient: { mode: "modelRef", modelNodeId: e.target.value },
+              } as Partial<AnyNodeData>)
+            }
+            className="flex-1 text-xs px-2 py-1 border rounded"
+          >
+            <option value="">— pick a ModelSpec node —</option>
+            {modelSpecs.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.data.varName} ({(n.data as ModelSpecData).modelKind})
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={onCreateNewModelSpec}
+            title="Create a fresh ModelSpec node (remote kind) and reference it here"
+            className="text-[11px] px-2 py-1 rounded border border-slate-300 text-sky-700 hover:bg-sky-50 whitespace-nowrap"
+          >
+            + new
+          </button>
+        </div>
+      </Field>
+      <Field label="output_field">
+        <TextInput
+          value={data.llmOutputField}
+          onChange={(v) =>
+            onPatch({ llmOutputField: v } as Partial<AnyNodeData>)
+          }
+        />
+      </Field>
+      <Field label="prompt template">
+        <TextArea
+          value={data.llmPrompt}
+          rows={4}
+          onChange={(v) => onPatch({ llmPrompt: v } as Partial<AnyNodeData>)}
+        />
+      </Field>
+      <Field label="gen_kwargs (JSON)">
+        <TextArea
+          value={data.llmGenKwargs}
+          rows={3}
+          onChange={(v) =>
+            onPatch({ llmGenKwargs: v } as Partial<AnyNodeData>)
+          }
+        />
+      </Field>
     </>
   );
 }
@@ -367,147 +466,6 @@ function VoteForm({ data, onPatch }: { data: VoteData; onPatch: Patcher }) {
           + add model fn
         </button>
       </div>
-    </>
-  );
-}
-
-function LLMCallForm({
-  data,
-  onPatch,
-}: {
-  data: LLMCallData;
-  onPatch: Patcher;
-}) {
-  const modelSpecs = useGraphStore((s) =>
-    s.nodes.filter((n) => n.data.kind === "ModelSpec"),
-  );
-  return (
-    <>
-      <Field label="client source">
-        <Select
-          value={data.client.mode}
-          options={["inline", "modelRef"]}
-          onChange={(mode) => {
-            if (mode === "inline") {
-              onPatch({
-                client: {
-                  mode: "inline",
-                  model: "gpt-4.1-mini",
-                  apiKey: "",
-                  baseUrl: "",
-                },
-              } as Partial<AnyNodeData>);
-            } else {
-              onPatch({
-                client: {
-                  mode: "modelRef",
-                  modelNodeId: modelSpecs[0]?.id ?? "",
-                },
-              } as Partial<AnyNodeData>);
-            }
-          }}
-        />
-      </Field>
-      {data.client.mode === "inline" ? (
-        <>
-          <Field label="model">
-            <TextInput
-              value={data.client.model}
-              onChange={(v) =>
-                onPatch({
-                  client: { ...data.client, model: v },
-                } as Partial<AnyNodeData>)
-              }
-            />
-          </Field>
-          <Field label="api_key">
-            <TextInput
-              value={data.client.apiKey}
-              onChange={(v) =>
-                onPatch({
-                  client: { ...data.client, apiKey: v },
-                } as Partial<AnyNodeData>)
-              }
-              placeholder="sk-..."
-            />
-          </Field>
-          <Field label="base_url (optional)">
-            <TextInput
-              value={data.client.baseUrl}
-              onChange={(v) =>
-                onPatch({
-                  client: { ...data.client, baseUrl: v },
-                } as Partial<AnyNodeData>)
-              }
-              placeholder="https://api.deepseek.com/v1"
-            />
-          </Field>
-        </>
-      ) : (
-        <Field label="model spec">
-          <select
-            value={data.client.modelNodeId}
-            onChange={(e) =>
-              onPatch({
-                client: { mode: "modelRef", modelNodeId: e.target.value },
-              } as Partial<AnyNodeData>)
-            }
-            className="w-full text-xs px-2 py-1 border rounded"
-          >
-            <option value="">— pick a ModelSpec node —</option>
-            {modelSpecs.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.data.varName} ({(n.data as ModelSpecData).modelKind})
-              </option>
-            ))}
-          </select>
-        </Field>
-      )}
-      <Field label="output_field">
-        <TextInput
-          value={data.outputField}
-          onChange={(v) =>
-            onPatch({ outputField: v } as Partial<AnyNodeData>)
-          }
-        />
-      </Field>
-      <Field label="prompt template">
-        <TextArea
-          value={data.prompt}
-          rows={4}
-          onChange={(v) => onPatch({ prompt: v } as Partial<AnyNodeData>)}
-        />
-      </Field>
-      <Field label="gen_kwargs (JSON)">
-        <TextArea
-          value={data.genKwargs}
-          rows={3}
-          onChange={(v) => onPatch({ genKwargs: v } as Partial<AnyNodeData>)}
-        />
-      </Field>
-      <Field label="intra_batch_workers">
-        <NumberInput
-          value={data.intraBatchWorkers}
-          min={1}
-          onChange={(v) =>
-            onPatch({ intraBatchWorkers: v } as Partial<AnyNodeData>)
-          }
-        />
-      </Field>
-      <SchemaEditor
-        label="input_schema"
-        value={data.inputSchema}
-        onChange={(v) =>
-          onPatch({ inputSchema: v } as Partial<AnyNodeData>)
-        }
-      />
-      <SchemaEditor
-        label="output_schema"
-        value={data.outputSchema}
-        onChange={(v) =>
-          onPatch({ outputSchema: v } as Partial<AnyNodeData>)
-        }
-      />
     </>
   );
 }
@@ -706,7 +664,7 @@ function ModelSpecUsage({ varName }: { varName: string }) {
 #        "image_url": {"url": "data:image/jpeg;base64,..."}}]}
 
 # Or, for the simple "fill a template, write reply to one field" case,
-# prefer the dedicated LLMCall node and pick this ModelSpec in its
+# flip the Processor's "LLM mode" toggle and pick this ModelSpec in its
 # "client source" dropdown — you get batch fan-out for free.`;
 
   const copy = () => {

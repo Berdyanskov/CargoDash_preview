@@ -14,8 +14,158 @@ import type {
   EdgePort,
   GraphProject,
   NodeKind,
+  ProcessorData,
 } from "../types/graph";
 import { defaultNodeData } from "../nodes/defaults";
+
+/** Bring old .cdgraph.json node data forward to the current schema.
+ * Per-node, three transforms can fire:
+ *
+ *  1. LLMCall node → Processor node with ``llmMode: true``. Keeps the
+ *     same id / position so edges still resolve.
+ *  2. Old Processor data (pre-LLM-merge) lacks the ``llm*`` fields and
+ *     ``llmMode`` flag. We backfill with defaults; ``llmMode`` defaults
+ *     to ``false`` so the existing fn-driven Processors keep working.
+ *  3. Inline ``llmClient`` (``{mode:"inline", model, apiKey, baseUrl}``)
+ *     is rewritten in the project-level migration (``migrateProject``)
+ *     since it needs to *spawn a new ModelSpec node* — not something a
+ *     per-node transform can do alone.
+ *
+ * The returned type may temporarily carry the legacy inline ``llmClient``
+ * shape until ``migrateProject`` resolves it. Treat ``migrateNodeData``
+ * output as intermediate; ``migrateProject`` is the canonical entry point.
+ */
+export function migrateNodeData(raw: unknown): AnyNodeData {
+  const d = raw as { kind?: string } & Record<string, unknown>;
+  if (d.kind === "LLMCall") {
+    // Old shape:
+    //   { kind: "LLMCall", prompt, outputField, client, genKwargs,
+    //     intraBatchWorkers, inputSchema, outputSchema, varName }
+    const out: ProcessorData = {
+      kind: "Processor",
+      varName: String(d.varName ?? ""),
+      llmMode: true,
+      // Code-mode defaults — never read because llmMode is true, but the
+      // type demands they exist.
+      mode: "sample",
+      fnSource: "def my_fn(row):\n    return row\n",
+      fnName: "my_fn",
+      llmPrompt: String(d.prompt ?? ""),
+      llmOutputField: String(d.outputField ?? "llm_output"),
+      // d.client may be legacy inline ({mode:"inline", model, apiKey,
+      // baseUrl}); the type only allows modelRef now. We use a double
+      // cast so migrateProject can see and rewrite it.
+      llmClient: d.client as unknown as ProcessorData["llmClient"],
+      llmGenKwargs: String(d.genKwargs ?? "{}"),
+      intraBatchWorkers: Number(d.intraBatchWorkers ?? 4),
+      inputSchema: (d.inputSchema as ProcessorData["inputSchema"]) ?? [],
+      outputSchema: (d.outputSchema as ProcessorData["outputSchema"]) ?? [],
+    };
+    return out;
+  }
+  if (d.kind === "Processor" && d.llmMode === undefined) {
+    // Backfill new llm* fields on a pre-merge Processor. Use modelRef
+    // with empty id as the placeholder — codegen will tell the user to
+    // pick one if they ever flip llmMode on without configuring it.
+    const out: ProcessorData = {
+      ...(d as unknown as ProcessorData),
+      llmMode: false,
+      llmPrompt: "Rewrite this sentence: {text}",
+      llmOutputField: "text",
+      llmClient: { mode: "modelRef", modelNodeId: "" },
+      llmGenKwargs: "{}",
+    };
+    return out;
+  }
+  return raw as AnyNodeData;
+}
+
+/** Default field set for a brand-new remote-kind ModelSpec. Used by
+ * the inline → ModelSpec migration; kept in sync with ``defaultNodeData``
+ * for ModelSpec, except the model identification fields come from the
+ * legacy inline client. */
+function remoteModelSpecFrom(
+  varName: string,
+  model: string,
+  apiKey: string,
+  baseUrl: string,
+): AnyNodeData {
+  return {
+    kind: "ModelSpec",
+    varName,
+    modelKind: "remote",
+    model,
+    apiKey,
+    baseUrl,
+    cacheDir: "",
+    trustRemoteCode: false,
+    dtype: "",
+    servedModelName: "",
+    tensorParallelSize: 1,
+    gpuMemoryUtilization: 0.9,
+    maxModelLen: 0,
+    extraArgs: "",
+    startupTimeout: 600,
+    logPath: "",
+    device: "cuda",
+    maxNewTokens: 512,
+  };
+}
+
+/** Project-level migration. Runs ``migrateNodeData`` per node first,
+ * then expands every inline-client LLM-mode Processor into a
+ * (Processor + sibling ModelSpec) pair. Inline was strictly equivalent
+ * to a remote-kind ModelSpec — we just make it explicit so all model
+ * declarations live in first-class nodes. No-op when there's nothing
+ * to migrate. */
+export function migrateProject(project: GraphProject): GraphProject {
+  let nodes = project.nodes.map((n) => ({
+    id: n.id,
+    position: n.position,
+    data: migrateNodeData(n.data),
+  }));
+
+  // Compute fresh-id counter from the *_<n> suffix of existing ids,
+  // so the spawned ModelSpec ids never collide with anything in the file.
+  let counter = Math.max(
+    0,
+    ...nodes.map((n) => {
+      const m = n.id.match(/_(\d+)$/);
+      return m ? parseInt(m[1], 10) : 0;
+    }),
+  );
+
+  const extras: typeof nodes = [];
+  nodes = nodes.map((n) => {
+    if (n.data.kind !== "Processor" || !n.data.llmMode) return n;
+    const legacyClient = n.data.llmClient as unknown as {
+      mode: string;
+      model?: string;
+      apiKey?: string;
+      baseUrl?: string;
+    };
+    if (legacyClient.mode !== "inline") return n;
+    counter += 1;
+    const newId = `ModelSpec_${counter}`;
+    extras.push({
+      id: newId,
+      position: { x: n.position.x - 240, y: n.position.y - 80 },
+      data: remoteModelSpecFrom(
+        `${n.data.varName}_model`,
+        String(legacyClient.model ?? ""),
+        String(legacyClient.apiKey ?? ""),
+        String(legacyClient.baseUrl ?? ""),
+      ),
+    });
+    const fixed: ProcessorData = {
+      ...n.data,
+      llmClient: { mode: "modelRef", modelNodeId: newId },
+    };
+    return { ...n, data: fixed };
+  });
+
+  return { ...project, nodes: [...nodes, ...extras] };
+}
 
 export type FlowNode = Node<AnyNodeData>;
 export type FlowEdge = Edge;
@@ -30,6 +180,14 @@ interface GraphState {
   onConnect: (conn: Connection) => void;
 
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
+  /** Like ``addNode`` but returns the new id and does NOT change
+   * ``selectedId`` — useful for "+ new ModelSpec" affordances on
+   * property panels, where the user is editing one node and wants
+   * to attach a fresh referenced node without losing their place. */
+  createNode: (
+    kind: NodeKind,
+    position: { x: number; y: number },
+  ) => string;
   updateNodeData: (id: string, patch: Partial<AnyNodeData>) => void;
   deleteNode: (id: string) => void;
   selectNode: (id: string | null) => void;
@@ -76,6 +234,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       return { nodes: [...s.nodes, node], selectedId: id };
     }),
 
+  createNode: (kind, position) => {
+    const id = nextNodeId(kind);
+    const data = defaultNodeData(kind, id);
+    set((s) => ({
+      nodes: [...s.nodes, { id, type: kind, position, data }],
+    }));
+    return id;
+  },
+
   updateNodeData: (id, patch) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
@@ -98,18 +265,19 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     if (project.version !== 1) {
       throw new Error(`unsupported project version: ${project.version}`);
     }
+    const migrated = migrateProject(project);
     nodeCounter = Math.max(
       nodeCounter,
-      ...project.nodes.map((n) => parseInt(n.id.split("_").pop() ?? "0", 10)),
+      ...migrated.nodes.map((n) => parseInt(n.id.split("_").pop() ?? "0", 10)),
     );
     set({
-      nodes: project.nodes.map((n) => ({
+      nodes: migrated.nodes.map((n) => ({
         id: n.id,
         position: n.position,
         type: n.data.kind,
         data: n.data,
       })),
-      edges: project.edges.map((e) => ({
+      edges: migrated.edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
