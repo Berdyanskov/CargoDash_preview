@@ -6,11 +6,11 @@
 
 > 🇨🇳 **中文用户请看 [README_ch.md](README_ch.md)** — 本文件是其英文镜像。
 
-> ✅ **Stable release (v1.0.0).** Starting from v1.0.0, CargoDash follows [Semantic Versioning](https://semver.org/): the public API exported from `cargodash/__init__.py` will not break within a major version. Breaking changes are reserved for a future major release and announced in advance in [CHANGELOG.md](CHANGELOG.md).
+> ✅ **Stable release (v1.0.5).** Starting from v1.0.0, CargoDash follows [Semantic Versioning](https://semver.org/): the public API exported from `cargodash/__init__.py` will not break within a major version. Breaking changes are reserved for a future major release and announced in advance in [CHANGELOG.md](CHANGELOG.md).
 
 CargoDash is a Python library for building **simple, modular, versatile, and efficient** LLM training-data synthesis & augmentation pipelines. Core idea: any data-processing pipeline can be expressed by nesting two primitives — **sequence** and **branch**.
 
-**Latest:** v1.0.0 — first stable release. Release notes in [CHANGELOG.md](CHANGELOG.md).
+**Latest:** v1.0.5 — adds [Agent skills](#agent-skills) so a coding agent can write or complete CargoDash pipelines for you. Release notes in [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -163,6 +163,16 @@ Running this on a remote server? If your editor forwards the port via a root sub
 
 More details: [`webui/README.md`](webui/README.md).
 
+## Agent skills
+
+Since v1.0.5, CargoDash ships [Claude Code](https://claude.com/claude-code) skills under [`skills/`](skills/) so a coding agent can build or finish pipelines for you:
+
+- **`cargodash-reference`** — the authoritative API + semantics, shared by the two below.
+- **`cargodash-fill-pipeline`** — you scaffold the graph in the WebUI and leave the node functions blank; the agent fills them in (works on the `.cdgraph.json` source of truth or the exported `pipeline.py`).
+- **`cargodash-from-scratch`** — describe the task in plain language and the agent designs the DAG and writes a runnable `pipeline.py`.
+
+Drop the `skills/` folder where your agent looks for skills (e.g. invoke `/cargodash-from-scratch`), and it picks the right one from your request.
+
 ## Workflow overview
 
 1. **Declare a schema**: `Schema.of(...)`, accepting Python types or `pyarrow.DataType`.
@@ -188,7 +198,8 @@ CargoDash/
 │   ├── voting/      # Vote
 │   ├── models/      # ChatClient abstractions + OpenAI-compat client + LLMCall
 │   └── runtime/     # Execution engine (threading + bounded queue + node-failure tolerance)
-└── webui/          # In-browser visual editor (React + React Flow + Monaco, one-way codegen → pipeline.py)
+├── webui/          # In-browser visual editor (React + React Flow + Monaco, one-way codegen → pipeline.py)
+└── skills/         # Agent skills (reference / fill-pipeline / from-scratch)
 ```
 
 ## Roadmap

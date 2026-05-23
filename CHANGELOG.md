@@ -7,6 +7,15 @@ As of v1.0.0, CargoDash follows [Semantic Versioning](https://semver.org/): the
 public API exported from `cargodash/__init__.py` is stable within a major
 version, and breaking changes are reserved for the next major release.
 
+## [1.0.5] - 2026-05-23
+
+### Added
+- Agent skills under `skills/` to make CargoDash Agent-friendly: a shared
+  `cargodash-reference` (authoritative API + semantics), `cargodash-fill-pipeline`
+  (complete the blank node functions in a WebUI-scaffolded `.cdgraph.json` /
+  `pipeline.py`), and `cargodash-from-scratch` (build a runnable pipeline from a
+  natural-language description). No library API change.
+
 ## [1.0.0] - 2026-05-17
 
 First stable release. The public API is now covered by a SemVer compatibility
@@ -70,6 +79,7 @@ guarantee.
   SENTINEL propagation to all downstreams and switches entry queues to drain
   mode — no more cascading deadlock. The original error is re-raised verbatim.
 
+[1.0.5]: https://github.com/Berdyanskov/CargoDash_preview/releases/tag/v1.0.5
 [1.0.0]: https://github.com/Berdyanskov/CargoDash_preview/releases/tag/v1.0.0
 [0.2.3]: https://github.com/Berdyanskov/CargoDash_preview/releases/tag/v0.2.3
 [0.2.2]: https://github.com/Berdyanskov/CargoDash_preview/releases/tag/v0.2.2

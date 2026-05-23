@@ -4,11 +4,11 @@
 
 # CargoDash
 
-> ✅ **正式稳定版本（v1.0.0）。** 自 v1.0.0 起，CargoDash 遵循[语义化版本](https://semver.org/lang/zh-CN/)：`cargodash/__init__.py` 导出的公共 API 在同一大版本内不会发生破坏性变更；破坏性变更只保留给未来的大版本，并提前在 [CHANGELOG.md](CHANGELOG.md) 中公示。
+> ✅ **正式稳定版本（v1.0.5）。** 自 v1.0.0 起，CargoDash 遵循[语义化版本](https://semver.org/lang/zh-CN/)：`cargodash/__init__.py` 导出的公共 API 在同一大版本内不会发生破坏性变更；破坏性变更只保留给未来的大版本，并提前在 [CHANGELOG.md](CHANGELOG.md) 中公示。
 
 CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大模型训练数据合成 / 增强流水线的 Python 库。核心理念：任何数据处理流水线都可以由**顺序**与**分支**两类原语嵌套组合而成。
 
-**当前版本：** v1.0.0 —— 首个正式稳定版。发布说明见 [CHANGELOG.md](CHANGELOG.md)。
+**当前版本：** v1.0.5 —— 新增 [Agent skills](#agent-skills)，让编码 Agent 替你编写或补全 CargoDash 流水线。发布说明见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 特性
 
@@ -158,6 +158,16 @@ npm run dev          # 浏览器打开 http://localhost:5173
 
 更多说明见 [`webui/README.md`](webui/README.md)。
 
+## Agent skills
+
+自 v1.0.5 起，CargoDash 在 [`skills/`](skills/) 下提供 [Claude Code](https://claude.com/claude-code) skills，让编码 Agent 替你搭建或补全流水线：
+
+- **`cargodash-reference`** —— 权威 API 与语义约定，供下面两个 skill 共用。
+- **`cargodash-fill-pipeline`** —— 你在 WebUI 里搭好图、把各节点函数留空，Agent 负责补全（既支持真值源 `.cdgraph.json`，也支持导出的 `pipeline.py`）。
+- **`cargodash-from-scratch`** —— 用自然语言描述任务，Agent 设计 DAG 并写出可直接运行的 `pipeline.py`。
+
+把 `skills/` 放到 Agent 查找 skill 的位置（例如调用 `/cargodash-from-scratch`），它会根据你的需求自动选用合适的 skill。
+
 ## 使用流程概览
 
 1. **声明 Schema**：`Schema.of(...)`，可传 python 类型或 `pyarrow.DataType`
@@ -183,7 +193,8 @@ CargoDash/
 │   ├── voting/      # Vote
 │   ├── models/      # ChatClient 抽象 + OpenAI 兼容 client + LLMCall
 │   └── runtime/     # 执行引擎（threading + bounded queue + 节点失败容错）
-└── webui/          # 浏览器内可视化构图（React + React Flow + Monaco，单向 codegen → pipeline.py）
+├── webui/          # 浏览器内可视化构图（React + React Flow + Monaco，单向 codegen → pipeline.py）
+└── skills/         # Agent skills（reference / fill-pipeline / from-scratch）
 ```
 
 ## Roadmap
