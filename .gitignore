@@ -14,4 +14,12 @@ in.jsonl
 out.jsonl
 examples/img.jpg
 examples/pipeline.py
-recipes/
+# --- recipes: track source + datasets, ignore caches ---
+recipes/**/__pycache__/
+recipes/**/.cache/
+recipes/**/*.dryrun.jsonl
+recipes/verified-math-reasoning/_numina_sample.jsonl
+recipes/verified-math-reasoning/CLAUDE.md
+recipes/verified-math-reasoning/DESIGN.md
+
+.pytest_cache/

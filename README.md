@@ -6,11 +6,11 @@
 
 > 🇨🇳 **中文用户请看 [README_ch.md](README_ch.md)** — 本文件是其英文镜像。
 
-> ✅ **Stable release (v1.0.5).** Starting from v1.0.0, CargoDash follows [Semantic Versioning](https://semver.org/): the public API exported from `cargodash/__init__.py` will not break within a major version. Breaking changes are reserved for a future major release and announced in advance in [CHANGELOG.md](CHANGELOG.md).
+> ✅ **Stable release (v1.0.6).** Starting from v1.0.0, CargoDash follows [Semantic Versioning](https://semver.org/): the public API exported from `cargodash/__init__.py` will not break within a major version. Breaking changes are reserved for a future major release and announced in advance in [CHANGELOG.md](CHANGELOG.md).
 
 CargoDash is a Python library for building **simple, modular, versatile, and efficient** LLM training-data synthesis & augmentation pipelines. Core idea: any data-processing pipeline can be expressed by nesting two primitives — **sequence** and **branch**.
 
-**Latest:** v1.0.5 — adds [Agent skills](#agent-skills) so a coding agent can write or complete CargoDash pipelines for you. Release notes in [CHANGELOG.md](CHANGELOG.md).
+**Latest:** v1.0.6 — adds native retry + `reasoning_content` fallback to `OpenAICompatChatClient`, the `JoinById` operator for fan-out + per-id merge, and a flagship recipe ([`recipes/verified-math-reasoning/`](recipes/verified-math-reasoning/)) shipping a 999-row CargoDash framework demo dataset. Release notes in [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -96,6 +96,24 @@ Pipeline(source).run()
 ```
 
 A full runnable example: [`examples/basic_pipeline.py`](examples/basic_pipeline.py).
+
+## Flagship recipe: verified math reasoning dataset
+
+[`recipes/verified-math-reasoning/`](recipes/verified-math-reasoning/) is a complete data-synthesis pipeline shipped with the v0.1 dataset it produced. **Three heterogeneous models** (DeepSeek + Doubao + Qwen3.5) each solve a NuminaMath olympiad problem, a **program verifier** extracts the `\boxed{}` answer and numerically compares it to the reference, and rows split into three buckets:
+
+- **`train_clean.jsonl`** — all three models agreed on the correct answer → high-confidence SFT / distillation data
+- **`hard_disagreement.jsonl`** — at least one model got it right, at least one got it wrong → the **disagreement set** is the unique value of voting-based pipelines: real difficulty signal for hard-benchmark and RLVR training
+- **`unsolved_flagged.jsonl`** — all three failed → suspected-hard or suspect-reference, flagged for review
+
+v0.1 stats (1000 NuminaMath olympiad problems → 999 published after decontamination, 3h39m wall-time):
+
+| split | rows | % | num_correct |
+|---|---|---|---|
+| `train_clean` | 524 | 52.5% | always 3/3 |
+| `hard_disagreement` | 312 | 31.2% | 1 or 2 / 3 |
+| `unsolved_flagged` | 163 | 16.3% | always 0/3 |
+
+The whole pipeline is **~180 lines** of CargoDash in the canonical 8-section layout — see [`recipes/verified-math-reasoning/pipeline.py`](recipes/verified-math-reasoning/pipeline.py). It exercises every CargoDash differentiator at once: fan-out via `>>`, the new `JoinById` operator for per-id merge, `Judge + Vote` for consensus branching, native retry + `reasoning_content` fallback on every LLM call, streaming backpressure across all three concurrent model nodes, and `Pipeline.run(dry_run_rows=N)` for safe small-batch trials. Reproduction quick-start in [`recipes/verified-math-reasoning/README.md`](recipes/verified-math-reasoning/README.md); design rationale in [`DESIGN.md`](recipes/verified-math-reasoning/DESIGN.md).
 
 ## Model deployment
 

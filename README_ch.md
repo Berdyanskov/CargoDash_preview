@@ -4,11 +4,11 @@
 
 # CargoDash
 
-> ✅ **正式稳定版本（v1.0.5）。** 自 v1.0.0 起，CargoDash 遵循[语义化版本](https://semver.org/lang/zh-CN/)：`cargodash/__init__.py` 导出的公共 API 在同一大版本内不会发生破坏性变更；破坏性变更只保留给未来的大版本，并提前在 [CHANGELOG.md](CHANGELOG.md) 中公示。
+> ✅ **正式稳定版本（v1.0.6）。** 自 v1.0.0 起，CargoDash 遵循[语义化版本](https://semver.org/lang/zh-CN/)：`cargodash/__init__.py` 导出的公共 API 在同一大版本内不会发生破坏性变更；破坏性变更只保留给未来的大版本，并提前在 [CHANGELOG.md](CHANGELOG.md) 中公示。
 
 CargoDash 是一个用于搭建**简单、模块化、多功能、高效**的大模型训练数据合成 / 增强流水线的 Python 库。核心理念：任何数据处理流水线都可以由**顺序**与**分支**两类原语嵌套组合而成。
 
-**当前版本：** v1.0.5 —— 新增 [Agent skills](#agent-skills)，让编码 Agent 替你编写或补全 CargoDash 流水线。发布说明见 [CHANGELOG.md](CHANGELOG.md)。
+**当前版本：** v1.0.6 —— `OpenAICompatChatClient` 原生 retry + `reasoning_content` fallback；新增 `JoinById` operator(fan-out 后按 id 汇合);旗舰 recipe [`recipes/verified-math-reasoning/`](recipes/verified-math-reasoning/) 附带 999 行 CargoDash 框架演示数据集。发布说明见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 特性
 
@@ -93,6 +93,24 @@ Pipeline(source).run()
 ```
 
 完整可运行示例见 [`examples/basic_pipeline.py`](examples/basic_pipeline.py)。
+
+## 旗舰 recipe：可验证数学推理数据集
+
+[`recipes/verified-math-reasoning/`](recipes/verified-math-reasoning/) 是一条完整的数据合成流水线，**连同它生产出来的 v0.1 数据集**一起入仓。**三个异构模型**（DeepSeek + Doubao + Qwen3.5）各自解一道 NuminaMath olympiad 题，**程序验证器**从每个解里抠出 `\boxed{}` 答案与标准答案做数值等价比对，再按"几个模型答对"分成三个篮子：
+
+- **`train_clean.jsonl`** — 三个模型一致答对 → 高置信 SFT / 蒸馏训练料
+- **`hard_disagreement.jsonl`** — 有的对有的错 → **分歧集**：投票分支才做得出的差异化产物，真实难度信号，可作 hard-benchmark / RLVR 困难样本
+- **`unsolved_flagged.jsonl`** — 三个都答错 → 疑似超难题或坏题，单独标记
+
+v0.1 数据集（1000 道 NuminaMath olympiad 题，去污染后实际发布 999 行，3 小时 39 分钟全量跑）：
+
+| split | 行数 | 占比 | num_correct |
+|---|---|---|---|
+| `train_clean` | 524 | 52.5% | 恒为 3/3 |
+| `hard_disagreement` | 312 | 31.2% | 1 或 2 / 3 |
+| `unsolved_flagged` | 163 | 16.3% | 恒为 0/3 |
+
+整条 pipeline **~180 行** CargoDash 代码，严格 8 段式排版——见 [`recipes/verified-math-reasoning/pipeline.py`](recipes/verified-math-reasoning/pipeline.py)。它把 CargoDash 的差异化卖点一次性全打开：`>>` fan-out、新内置 `JoinById` operator 按 id 汇合、`Judge + Vote` 共识分支、每次 LLM 调用自带 retry + `reasoning_content` fallback、三模型节点真并行 + 流式背压、`Pipeline.run(dry_run_rows=N)` 安全试跑。复现入口见 [`recipes/verified-math-reasoning/README.md`](recipes/verified-math-reasoning/README.md)，设计文档见 [`DESIGN.md`](recipes/verified-math-reasoning/DESIGN.md)。
 
 ## 模型部署
 

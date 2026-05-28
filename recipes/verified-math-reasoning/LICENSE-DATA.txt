@@ -1,0 +1,50 @@
+Verified-Math-Reasoning Dataset — License
+
+The output files of this dataset:
+    - out_train_clean.jsonl
+    - out_hard_disagreement.jsonl
+    - out_unsolved_flagged.jsonl
+
+are released under the Creative Commons Attribution-NonCommercial-ShareAlike
+4.0 International License (CC-BY-NC-SA 4.0).
+
+Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+You are free to:
+    Share — copy and redistribute the material in any medium or format
+    Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+    Attribution — You must give appropriate credit, provide a link to the
+        license, and indicate if changes were made.
+    NonCommercial — You may not use the material for commercial purposes.
+    ShareAlike — If you remix, transform, or build upon the material, you
+        must distribute your contributions under the same license as the
+        original.
+
+------------------------------------------------------------------------
+
+Note on upstream provider terms (read NOTICE.md):
+
+The output files contain AI-generated content produced by three upstream
+model providers (DeepSeek, Volcengine Doubao, Aliyun Qwen). Their respective
+Terms of Service add further restrictions on top of this dataset's
+CC-BY-NC-SA license — including, for the Volcengine ARK service, a
+mainland-China-only license territory and a written-permission requirement
+for any commercial use, and for the Aliyun Bailian service, a prohibition on
+using the outputs to train competing Qwen-class models. See NOTICE.md for
+the per-column attribution and the specific clauses you inherit.
+
+------------------------------------------------------------------------
+
+Non-output files in this directory:
+
+    - pipeline.py, verifier.py, decontam.py, load_numina.py, test_verifier.py
+    - DESIGN.md, CLAUDE.md, README.md
+    - _demo_seeds.jsonl, _numina_1k.jsonl (seed data: NuminaMath-1.5,
+      Apache-2.0 upstream)
+
+are released under the same license as the CargoDash framework (see
+../../LICENSE in the repo root — MIT or as-applicable). The CC-BY-NC-SA 4.0
+constraint above applies specifically to the three out_*.jsonl output files.
