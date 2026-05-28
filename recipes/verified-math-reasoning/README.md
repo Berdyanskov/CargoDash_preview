@@ -4,7 +4,7 @@ language:
   - en
 task_categories:
   - text-generation
-  - text2text-generation
+  - question-answering
 tags:
   - math
   - reasoning
