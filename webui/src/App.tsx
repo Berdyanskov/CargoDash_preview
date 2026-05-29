@@ -25,14 +25,24 @@ export default function App() {
   // Per-export setting — not part of the graph, so it lives in local UI
   // state and is not persisted in .cdgraph.json.
   const [dryRunOn, setDryRunOn] = useState(false);
-  const [dryRunRows, setDryRunRows] = useState(10);
+  // Held as a raw string so the field can be cleared / retyped freely; it's
+  // parsed and validated at export time rather than silently snapping back
+  // to a stale value on invalid input.
+  const [dryRunRows, setDryRunRows] = useState("10");
 
   const onExportPy = () => {
     const project = toProject();
+    let dryRunRowsArg: number | null = null;
+    if (dryRunOn) {
+      const n = parseInt(dryRunRows, 10);
+      if (!Number.isFinite(n) || n <= 0) {
+        alert("Dry-run rows must be a positive integer.");
+        return;
+      }
+      dryRunRowsArg = n;
+    }
     try {
-      const code = generatePython(project, {
-        dryRunRows: dryRunOn ? dryRunRows : null,
-      });
+      const code = generatePython(project, { dryRunRows: dryRunRowsArg });
       downloadBlob("pipeline.py", code, "text/x-python");
     } catch (err) {
       alert((err as Error).message);
@@ -97,10 +107,7 @@ export default function App() {
             type="number"
             min={1}
             value={dryRunRows}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              if (Number.isFinite(n) && n > 0) setDryRunRows(n);
-            }}
+            onChange={(e) => setDryRunRows(e.target.value)}
             disabled={!dryRunOn}
             className="w-14 px-1.5 py-0.5 rounded border border-slate-300 text-right disabled:bg-slate-100 disabled:text-slate-400"
           />

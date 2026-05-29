@@ -180,6 +180,12 @@ function ProcessorForm({
           }
         />
       </Field>
+      {!data.llmMode && data.mode === "batch" && (
+        <div className="text-[10.5px] leading-snug text-amber-600 -mt-1">
+          Ignored in batch mode — your fn receives the whole Batch and owns
+          any concurrency itself. (Applies in sample / LLM mode.)
+        </div>
+      )}
       {data.llmMode ? (
         <ProcessorLLMFields data={data} onPatch={onPatch} />
       ) : (
@@ -247,11 +253,15 @@ function ProcessorLLMFields({
   );
   const createNode = useGraphStore((s) => s.createNode);
   const onCreateNewModelSpec = () => {
-    // Drop the new ModelSpec at a fixed canvas-space offset; the user
-    // will reposition. Selection is intentionally NOT switched (see
-    // `createNode` vs `addNode`) so the user stays on the Processor
-    // they're configuring.
-    const id = createNode("ModelSpec", { x: 100, y: 100 });
+    // Stagger each new ModelSpec diagonally off (100,100) by the number of
+    // existing specs, so repeated "+ new" clicks don't pile onto one spot.
+    // Selection is intentionally NOT switched (see `createNode` vs
+    // `addNode`) so the user stays on the Processor they're configuring.
+    const offset = modelSpecs.length * 36;
+    const id = createNode("ModelSpec", {
+      x: 100 + offset,
+      y: 100 + offset,
+    });
     onPatch({
       llmClient: { mode: "modelRef", modelNodeId: id },
     } as Partial<AnyNodeData>);
@@ -352,6 +362,12 @@ function JudgeForm({ data, onPatch }: { data: JudgeData; onPatch: Patcher }) {
           }
         />
       </Field>
+      {data.granularity === "batch" && (
+        <div className="text-[10.5px] leading-snug text-amber-600 -mt-1">
+          Ignored at batch granularity — the predicate is called once on the
+          whole Batch. (Applies at sample granularity.)
+        </div>
+      )}
       <Field label="predicate source">
         <Select
           value={data.predicate.mode}
@@ -500,6 +516,12 @@ function VoteForm({ data, onPatch }: { data: VoteData; onPatch: Patcher }) {
         <div className="text-[11px] uppercase tracking-wide text-slate-400">
           model_list
         </div>
+        <div className="text-[10.5px] leading-snug text-slate-500">
+          Each fn takes a <code className="font-mono">sample</code> dict and
+          returns truthy/falsy. Set a prompt only if that fn also accepts it
+          (<code className="font-mono">model(sample, prompt)</code>); leave it
+          empty otherwise.
+        </div>
         {data.models.map((m, i) => (
           <div key={i} className="border rounded p-2 space-y-2 bg-slate-50">
             <div className="flex items-center gap-2">
@@ -522,6 +544,13 @@ function VoteForm({ data, onPatch }: { data: VoteData; onPatch: Patcher }) {
               onChange={(v) => updateModel(i, { fnSource: v })}
               height={120}
             />
+            <Field label="prompt (optional)">
+              <TextInput
+                value={m.prompt ?? ""}
+                placeholder="(none — called as model(sample))"
+                onChange={(v) => updateModel(i, { prompt: v })}
+              />
+            </Field>
           </div>
         ))}
         <button
@@ -664,6 +693,12 @@ function ModelSpecForm({
               onChange={(v) => onPatch({ dtype: v } as Partial<AnyNodeData>)}
             />
           </Field>
+          {!data.dtype && (
+            <div className="text-[10.5px] leading-snug text-amber-600 -mt-1">
+              Empty lets the backend default to float32 — usually wrong for
+              7B+ models (slow / OOM). Pick float16 or bfloat16 explicitly.
+            </div>
+          )}
           <Checkbox
             label="trust_remote_code"
             value={data.trustRemoteCode}

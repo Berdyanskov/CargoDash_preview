@@ -141,7 +141,16 @@ function trimmedSource(src) {
 }
 function emitVoteCtor(data, fnNamesByVoteId, voteId) {
     const names = fnNamesByVoteId.get(voteId) ?? [];
-    return `Vote(model_list=[${names.join(", ")}], true_num=${data.trueNum})`;
+    const args = [`model_list=[${names.join(", ")}]`, `true_num=${data.trueNum}`];
+    // prompt_list is positionally aligned with model_list (same order as
+    // data.models, which is the order names were collected in). Emit it only
+    // when at least one model carries a prompt; per-model None for the rest.
+    const prompts = data.models.map((m) => m.prompt?.trim() || null);
+    if (prompts.some((p) => p !== null)) {
+        const items = prompts.map((p) => (p === null ? "None" : pyStr(p)));
+        args.push(`prompt_list=[${items.join(", ")}]`);
+    }
+    return `Vote(${args.join(", ")})`;
 }
 /** Emit a ``LLMCall(prompt=..., client=<modelspec_var>, ...)`` Python
  * literal for an LLM-mode Processor. The client is always resolved

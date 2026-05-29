@@ -130,6 +130,10 @@ export interface VoteModelEntry {
   /** Python source for one model callable. */
   fnSource: string;
   fnName: string;
+  /** Optional per-model prompt (Python ``Vote.prompt_list``). When set, the
+   * model is called as ``model(sample, prompt)`` — so its fn must accept a
+   * second positional arg. Empty/absent = ``model(sample)``. */
+  prompt?: string;
 }
 
 export interface VoteData extends NodeBase {
